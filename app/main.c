@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 int main() {
-  logger_init(LOG_LEVEL_INFO);
+  m_logger_init(M_INFO);
 
   if (glfwInit() == GLFW_FALSE) {
     printf("Unable to initialise GLFW\n");
@@ -15,7 +15,7 @@ int main() {
   if (window == NULL) {
     return -1;
   }
-  logger_info("Successfully initialised GLFW and created window");
+  m_logger_info("Successfully initialised GLFW and created window");
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
