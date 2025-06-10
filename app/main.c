@@ -1,13 +1,12 @@
-#include "logger.h"
+#include "result.h"
 #include "window.h"
 
 #include <stdio.h>
 
 int main() {
-  m_logger_init(M_INFO);
-
-  M_Window *window = m_window_create("Game Engine", 640, 480);
-  if (window == NULL) {
+  M_Window *window;
+  const enum M_Result result = m_window_create(&window, "Game Engine", 640, 480);
+  if (result != M_SUCCESS) {
     return -1;
   }
 

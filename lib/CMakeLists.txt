@@ -5,6 +5,7 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SOURCES
 	src/logger.c
 	src/vulkan.c
+	src/result.c
 	src/window.c)
 
 find_package(Vulkan REQUIRED)

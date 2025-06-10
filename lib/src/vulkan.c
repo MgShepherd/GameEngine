@@ -1,6 +1,6 @@
 #include "vulkan.h"
 #include "GLFW/glfw3.h"
-#include "logger.h"
+#include "result.h"
 #include <stdio.h>
 
 #include <stdlib.h>
@@ -10,24 +10,30 @@
 
 const uint32_t NUM_ADDITIONAL_EXTENSIONS = 1;
 
-void process_vulkan_result(VkResult result) {
+enum M_Result process_vulkan_result(VkResult result) {
   if (result != VK_SUCCESS) {
-    m_logger_error("Vulkan Error: %s", string_VkResult(result));
+    m_result_process(M_VULKAN_INIT_ERR, string_VkResult(result));
+    return M_VULKAN_INIT_ERR;
   }
+
+  return M_SUCCESS;
 }
 
-void get_required_extensions(const char ***extensions, uint32_t *num_extensions) {
+const char **get_required_extensions(uint32_t *num_extensions) {
   const char **glfw_extensions = glfwGetRequiredInstanceExtensions(num_extensions);
-  // TODO: Handle null value here - should maybe check vulkan is supported first
 
   *num_extensions += NUM_ADDITIONAL_EXTENSIONS;
-  *extensions = malloc(*num_extensions * sizeof(char *));
+  const char **extensions = malloc(*num_extensions * sizeof(char *));
   // TODO: Handle null value here
-  memcpy(*extensions, glfw_extensions, (*num_extensions - NUM_ADDITIONAL_EXTENSIONS) * sizeof(char *));
-  (*extensions)[*num_extensions - 1] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+  memcpy(extensions, glfw_extensions, (*num_extensions - NUM_ADDITIONAL_EXTENSIONS) * sizeof(char *));
+  extensions[*num_extensions - 1] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+
+  return extensions;
 }
 
-void m_vulkan_init(VkInstance *instance, const char *app_name) {
+enum M_Result m_vulkan_init(VkInstance *instance, const char *app_name) {
+  enum M_Result result = M_SUCCESS;
+
   const VkApplicationInfo app_info = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
       .pApplicationName = app_name,
@@ -42,22 +48,20 @@ void m_vulkan_init(VkInstance *instance, const char *app_name) {
   };
 
   uint32_t num_extensions = 0;
-  const char **extensions = NULL;
-  get_required_extensions(&extensions, &num_extensions);
+  const char **extensions = get_required_extensions(&num_extensions);
+  if (extensions == NULL) {
+    result = M_VULKAN_INIT_ERR;
+    goto vulkan_init_cleanup;
+  }
 
   instance_create_info.enabledExtensionCount = num_extensions;
   instance_create_info.ppEnabledExtensionNames = extensions;
 
-  const VkResult result = vkCreateInstance(&instance_create_info, NULL, instance);
-  process_vulkan_result(result);
+  result = process_vulkan_result(vkCreateInstance(&instance_create_info, NULL, instance));
 
-  // TODO: Improve error processing
-  if (result == VK_SUCCESS) {
-    m_logger_info("Successfully initialised vulkan");
-  } else {
-    m_logger_error("Unable to initialise vulkan");
-  }
-
+vulkan_init_cleanup:
   if (extensions != NULL)
     free(extensions);
+
+  return result;
 }

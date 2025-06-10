@@ -9,10 +9,6 @@ const size_t TIME_DISPLAY_LEN = 10;
 
 enum M_LogLevel g_level = M_INFO;
 
-void glfw_error_callback(int error, const char *description) {
-  m_logger_error("GLFW Error %d: %s", error, description);
-}
-
 const char *get_log_level_str(enum M_LogLevel level) {
   switch (level) {
   case M_INFO:
@@ -40,7 +36,6 @@ void display_formatted_message(enum M_LogLevel level, FILE *file, const char *me
 
 void m_logger_init(enum M_LogLevel level) {
   g_level = level;
-  glfwSetErrorCallback(glfw_error_callback);
   m_logger_info("Logger successfully initialised");
 }
 
