@@ -23,9 +23,35 @@ enum M_Result process_vulkan_result(VkResult result) {
   return M_SUCCESS;
 }
 
-const char **get_required_extensions(uint32_t *num_extensions) {
-  const char **glfw_extensions = glfwGetRequiredInstanceExtensions(num_extensions);
+bool all_extensions_supported(const VkExtensionProperties *available_extensions, uint32_t num_available_extensions, const char **required_extensions, uint32_t num_required_extensions) {
+  bool found = false;
+  for (uint32_t i = 0; i < num_required_extensions; i++) {
+    found = false;
+    for (uint32_t j = 0; j < num_available_extensions; j++) {
+      if (strcmp(available_extensions[j].extensionName, required_extensions[i]) == 0) {
+        found = true;
+        break;
+      }
+    }
 
+    if (!found) {
+      m_logger_error("Unsupported instance extension: %s", required_extensions[i]);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const char **get_required_extensions(uint32_t *num_extensions) {
+  uint32_t num_available_extensions = 0;
+  vkEnumerateInstanceExtensionProperties(NULL, &num_available_extensions, NULL);
+  VkExtensionProperties available_extensions[num_available_extensions];
+  const enum M_Result result = process_vulkan_result(vkEnumerateInstanceExtensionProperties(NULL, &num_available_extensions, available_extensions));
+  if (result != M_SUCCESS)
+    return NULL;
+
+  const char **glfw_extensions = glfwGetRequiredInstanceExtensions(num_extensions);
   *num_extensions += NUM_ADDITIONAL_EXTENSIONS;
   const char **extensions = malloc(*num_extensions * sizeof(char *));
   if (extensions == NULL) {
@@ -34,6 +60,11 @@ const char **get_required_extensions(uint32_t *num_extensions) {
 
   memcpy(extensions, glfw_extensions, (*num_extensions - NUM_ADDITIONAL_EXTENSIONS) * sizeof(char *));
   extensions[*num_extensions - 1] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+
+  if (!all_extensions_supported(available_extensions, num_available_extensions, extensions, *num_extensions)) {
+    free(extensions);
+    return NULL;
+  }
 
   return extensions;
 }
