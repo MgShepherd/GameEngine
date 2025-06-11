@@ -17,8 +17,7 @@ struct M_Instance {
 
 enum M_Result process_vulkan_result(VkResult result) {
   if (result != VK_SUCCESS) {
-    m_result_process(M_VULKAN_INIT_ERR, string_VkResult(result));
-    return M_VULKAN_INIT_ERR;
+    return m_result_process(M_VULKAN_INIT_ERR, string_VkResult(result));
   }
 
   return M_SUCCESS;
@@ -29,7 +28,10 @@ const char **get_required_extensions(uint32_t *num_extensions) {
 
   *num_extensions += NUM_ADDITIONAL_EXTENSIONS;
   const char **extensions = malloc(*num_extensions * sizeof(char *));
-  // TODO: Handle null value here
+  if (extensions == NULL) {
+    return NULL;
+  }
+
   memcpy(extensions, glfw_extensions, (*num_extensions - NUM_ADDITIONAL_EXTENSIONS) * sizeof(char *));
   extensions[*num_extensions - 1] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
 
@@ -41,8 +43,7 @@ enum M_Result m_instance_create(struct M_Instance **instance, const char *app_na
 
   *instance = malloc(sizeof(struct M_Instance));
   if (*instance == NULL) {
-    result = M_MEMORY_ALLOC_ERR;
-    m_result_process(result, "Unable to allocate required memory for M_Instance struct");
+    result = m_result_process(M_MEMORY_ALLOC_ERR, "Unable to allocate required memory for M_Instance struct");
     goto instance_init_cleanup;
   }
 
@@ -62,7 +63,7 @@ enum M_Result m_instance_create(struct M_Instance **instance, const char *app_na
   uint32_t num_extensions = 0;
   const char **extensions = get_required_extensions(&num_extensions);
   if (extensions == NULL) {
-    result = M_VULKAN_INIT_ERR;
+    result = m_result_process(M_VULKAN_INIT_ERR, "Unable to load required instance extensions");
     goto instance_init_cleanup;
   }
 
@@ -78,15 +79,19 @@ enum M_Result m_instance_create(struct M_Instance **instance, const char *app_na
 instance_init_cleanup:
   if (extensions != NULL)
     free(extensions);
-  if (result != M_SUCCESS && *instance != NULL)
-    free(*instance);
+  if (result != M_SUCCESS) {
+    m_instance_destroy(*instance);
+    *instance = NULL;
+  }
 
   return result;
 }
 
 void m_instance_destroy(M_Instance *instance) {
   if (instance != NULL) {
-    vkDestroyInstance(instance->vk_instance, NULL);
+    if (instance->vk_instance != NULL) {
+      vkDestroyInstance(instance->vk_instance, NULL);
+    }
     free(instance);
   }
 }

@@ -3,13 +3,14 @@
 #include <assert.h>
 #include <stdio.h>
 
-void default_handler(enum M_Result code, const char *description) {
+enum M_Result default_handler(enum M_Result code, const char *description) {
   if (code != M_SUCCESS) {
     m_logger_error("Error %s: %s\n", m_result_to_string(code), description);
   }
+  return code;
 }
 
-void (*g_handler)(enum M_Result code, const char *description) = &default_handler;
+enum M_Result (*g_handler)(enum M_Result code, const char *description) = &default_handler;
 
 const char *m_result_to_string(enum M_Result result) {
   switch (result) {
@@ -24,12 +25,14 @@ const char *m_result_to_string(enum M_Result result) {
   }
 }
 
-void m_result_set_handler(void (*handler)(enum M_Result code, const char *description)) {
+void m_result_set_handler(enum M_Result (*handler)(enum M_Result code, const char *description)) {
   g_handler = handler;
 }
 
-void m_result_process(enum M_Result code, const char *description) {
+enum M_Result m_result_process(enum M_Result code, const char *description) {
   if (g_handler != NULL) {
-    g_handler(code, description);
+    return g_handler(code, description);
   }
+
+  return M_SUCCESS;
 }

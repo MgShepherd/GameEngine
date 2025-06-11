@@ -24,14 +24,13 @@ enum M_Result m_window_create(M_Window **window, const char *title, int width, i
   glfwSetErrorCallback(glfw_error_callback);
 
   if (glfwInit() == GLFW_FALSE) {
-    result = M_WINDOW_INIT_ERR;
+    result = m_result_process(M_WINDOW_INIT_ERR, "Unable to initialise GLFW");
     goto window_create_cleanup;
   }
 
   *window = malloc(sizeof(struct M_Window));
   if (window == NULL) {
-    result = M_MEMORY_ALLOC_ERR;
-    m_result_process(result, "Unable to allocate memory required for Window object");
+    result = m_result_process(M_MEMORY_ALLOC_ERR, "Unable to allocate memory required for Window object");
     goto window_create_cleanup;
   }
 
@@ -42,7 +41,7 @@ enum M_Result m_window_create(M_Window **window, const char *title, int width, i
   (*window)->height = height;
 
   if ((*window)->glfw_window == NULL) {
-    result = M_WINDOW_INIT_ERR;
+    result = m_result_process(M_WINDOW_INIT_ERR, "Unable to create GLFW Window");
     goto window_create_cleanup;
   }
 
@@ -50,8 +49,8 @@ enum M_Result m_window_create(M_Window **window, const char *title, int width, i
 
 window_create_cleanup:
   if (result != M_SUCCESS) {
-    if (*window != NULL)
-      m_window_destroy(*window);
+    m_window_destroy(*window);
+    *window = NULL;
   }
 
   return result;
@@ -68,8 +67,9 @@ void m_window_update(struct M_Window *window) {
 }
 
 void m_window_destroy(struct M_Window *window) {
-  if (window != NULL && window->glfw_window != NULL) {
-    glfwDestroyWindow(window->glfw_window);
+  if (window != NULL) {
+    if (window->glfw_window != NULL)
+      glfwDestroyWindow(window->glfw_window);
     free(window);
   }
   glfwTerminate();

@@ -10,8 +10,8 @@ enum M_Result {
 
 const char *m_result_to_string(enum M_Result result);
 
-void m_result_set_handler(void (*handler)(enum M_Result code, const char *description));
+void m_result_set_handler(enum M_Result (*handler)(enum M_Result code, const char *description));
 
-void m_result_process(enum M_Result code, const char *description);
+enum M_Result m_result_process(enum M_Result code, const char *description);
 
 #endif // !RESULT_H
