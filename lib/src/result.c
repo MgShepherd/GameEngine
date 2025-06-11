@@ -19,6 +19,8 @@ const char *m_result_to_string(enum M_Result result) {
     return "VULKAN_INIT";
   case M_WINDOW_INIT_ERR:
     return "WINDOW_INIT";
+  case M_MEMORY_ALLOC_ERR:
+    return "MEMORY_ALLOCATION";
   }
 }
 

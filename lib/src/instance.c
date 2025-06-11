@@ -1,5 +1,6 @@
-#include "vulkan.h"
+#include "instance.h"
 #include "GLFW/glfw3.h"
+#include "logger.h"
 #include "result.h"
 #include <stdio.h>
 
@@ -9,6 +10,10 @@
 #include <vulkan/vulkan_core.h>
 
 const uint32_t NUM_ADDITIONAL_EXTENSIONS = 1;
+
+struct M_Instance {
+  VkInstance vk_instance;
+};
 
 enum M_Result process_vulkan_result(VkResult result) {
   if (result != VK_SUCCESS) {
@@ -31,8 +36,15 @@ const char **get_required_extensions(uint32_t *num_extensions) {
   return extensions;
 }
 
-enum M_Result m_vulkan_init(VkInstance *instance, const char *app_name) {
+enum M_Result m_instance_create(struct M_Instance **instance, const char *app_name) {
   enum M_Result result = M_SUCCESS;
+
+  *instance = malloc(sizeof(struct M_Instance));
+  if (*instance == NULL) {
+    result = M_MEMORY_ALLOC_ERR;
+    m_result_process(result, "Unable to allocate required memory for M_Instance struct");
+    goto instance_init_cleanup;
+  }
 
   const VkApplicationInfo app_info = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -51,17 +63,30 @@ enum M_Result m_vulkan_init(VkInstance *instance, const char *app_name) {
   const char **extensions = get_required_extensions(&num_extensions);
   if (extensions == NULL) {
     result = M_VULKAN_INIT_ERR;
-    goto vulkan_init_cleanup;
+    goto instance_init_cleanup;
   }
 
   instance_create_info.enabledExtensionCount = num_extensions;
   instance_create_info.ppEnabledExtensionNames = extensions;
 
-  result = process_vulkan_result(vkCreateInstance(&instance_create_info, NULL, instance));
+  result = process_vulkan_result(vkCreateInstance(&instance_create_info, NULL, &(*instance)->vk_instance));
+  if (result != M_SUCCESS)
+    goto instance_init_cleanup;
 
-vulkan_init_cleanup:
+  m_logger_info("Successfully initialised M_Instance");
+
+instance_init_cleanup:
   if (extensions != NULL)
     free(extensions);
+  if (result != M_SUCCESS && *instance != NULL)
+    free(*instance);
 
   return result;
+}
+
+void m_instance_destroy(M_Instance *instance) {
+  if (instance != NULL) {
+    vkDestroyInstance(instance->vk_instance, NULL);
+    free(instance);
+  }
 }
