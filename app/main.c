@@ -14,7 +14,11 @@ int main() {
     goto cleanup;
   }
 
-  result = m_instance_create(&instance, app_name);
+  const M_InstanceOptions options = {
+      .app_name = app_name,
+      .enable_debug = true,
+  };
+  result = m_instance_create(&instance, &options);
   if (result != M_SUCCESS) {
     goto cleanup;
   }

@@ -10,6 +10,7 @@
 #include <vulkan/vulkan_core.h>
 
 const uint32_t NUM_ADDITIONAL_EXTENSIONS = 1;
+const uint32_t NUM_VALIDATION_LAYERS = 1;
 
 struct M_Instance {
   VkInstance vk_instance;
@@ -43,6 +44,26 @@ bool all_extensions_supported(const VkExtensionProperties *available_extensions,
   return true;
 }
 
+bool all_layers_supported(const VkLayerProperties *available_layers, uint32_t num_available_layers, const char **required_layers) {
+  bool found = false;
+  for (uint32_t i = 0; i < NUM_VALIDATION_LAYERS; i++) {
+    found = false;
+    for (uint32_t j = 0; j < num_available_layers; j++) {
+      if (strcmp(available_layers[j].layerName, required_layers[i]) == 0) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      m_logger_error("Unsupported instance validation layer: %s", required_layers[i]);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 const char **get_required_extensions(uint32_t *num_extensions) {
   uint32_t num_available_extensions = 0;
   vkEnumerateInstanceExtensionProperties(NULL, &num_available_extensions, NULL);
@@ -69,8 +90,32 @@ const char **get_required_extensions(uint32_t *num_extensions) {
   return extensions;
 }
 
-enum M_Result m_instance_create(struct M_Instance **instance, const char *app_name) {
+const char **get_validation_layers() {
+  uint32_t num_available_layers = 0;
+  vkEnumerateInstanceLayerProperties(&num_available_layers, NULL);
+  VkLayerProperties available_layers[num_available_layers];
+  const enum M_Result result = process_vulkan_result(vkEnumerateInstanceLayerProperties(&num_available_layers, available_layers));
+  if (result != M_SUCCESS)
+    return NULL;
+
+  const char **required_layers = malloc(NUM_VALIDATION_LAYERS * sizeof(char *));
+  if (required_layers == NULL) {
+    return NULL;
+  }
+  required_layers[0] = "VK_LAYER_KHRONOS_validation";
+
+  if (!all_layers_supported(available_layers, num_available_layers, required_layers)) {
+    free(required_layers);
+    return NULL;
+  }
+
+  return required_layers;
+}
+
+enum M_Result m_instance_create(struct M_Instance **instance, const M_InstanceOptions *instance_options) {
   enum M_Result result = M_SUCCESS;
+  const char **validation_layers = NULL;
+  const char **extensions = NULL;
 
   *instance = malloc(sizeof(struct M_Instance));
   if (*instance == NULL) {
@@ -80,19 +125,18 @@ enum M_Result m_instance_create(struct M_Instance **instance, const char *app_na
 
   const VkApplicationInfo app_info = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-      .pApplicationName = app_name,
+      .pApplicationName = instance_options->app_name,
       .applicationVersion = VK_MAKE_VERSION(0, 1, 0),
   };
 
   VkInstanceCreateInfo instance_create_info = {
       .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
       .pApplicationInfo = &app_info,
-      .enabledLayerCount = 0,
       .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
   };
 
   uint32_t num_extensions = 0;
-  const char **extensions = get_required_extensions(&num_extensions);
+  extensions = get_required_extensions(&num_extensions);
   if (extensions == NULL) {
     result = m_result_process(M_VULKAN_INIT_ERR, "Unable to load required instance extensions");
     goto instance_init_cleanup;
@@ -100,6 +144,20 @@ enum M_Result m_instance_create(struct M_Instance **instance, const char *app_na
 
   instance_create_info.enabledExtensionCount = num_extensions;
   instance_create_info.ppEnabledExtensionNames = extensions;
+
+  if (instance_options->enable_debug) {
+    validation_layers = get_validation_layers();
+    if (validation_layers == NULL) {
+      result = m_result_process(M_VULKAN_INIT_ERR, "Unable to load requested validation layers");
+      goto instance_init_cleanup;
+    }
+
+    instance_create_info.enabledLayerCount = NUM_VALIDATION_LAYERS;
+    instance_create_info.ppEnabledLayerNames = validation_layers;
+    m_logger_info("Validation layers enabled");
+  } else {
+    instance_create_info.enabledLayerCount = 0;
+  }
 
   result = process_vulkan_result(vkCreateInstance(&instance_create_info, NULL, &(*instance)->vk_instance));
   if (result != M_SUCCESS)
@@ -110,6 +168,8 @@ enum M_Result m_instance_create(struct M_Instance **instance, const char *app_na
 instance_init_cleanup:
   if (extensions != NULL)
     free(extensions);
+  if (validation_layers != NULL)
+    free(validation_layers);
   if (result != M_SUCCESS) {
     m_instance_destroy(*instance);
     *instance = NULL;
