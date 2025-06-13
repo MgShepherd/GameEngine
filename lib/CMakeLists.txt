@@ -6,6 +6,7 @@ set(SOURCES
 	src/logger.c
 	src/instance.c
 	src/result.c
+	src/vk_instance_helper.c
 	src/window.c)
 
 find_package(Vulkan REQUIRED)
