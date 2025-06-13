@@ -13,7 +13,7 @@
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
 
-const uint32_t NUM_ADDITIONAL_EXTENSIONS = 2;
+const uint32_t NUM_ADDITIONAL_EXTENSIONS = 3;
 const uint32_t NUM_VALIDATION_LAYERS = 1;
 
 bool all_extensions_supported(const VkExtensionProperties *available_extensions, uint32_t num_available_extensions, const char **required_extensions, uint32_t num_required_extensions) {
@@ -74,6 +74,7 @@ const char **get_required_extensions(uint32_t *num_extensions) {
   memcpy(extensions, glfw_extensions, (*num_extensions - NUM_ADDITIONAL_EXTENSIONS) * sizeof(char *));
   extensions[*num_extensions - 1] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
   extensions[*num_extensions - 2] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+  extensions[*num_extensions - 3] = "VK_KHR_get_physical_device_properties2";
 
   if (!all_extensions_supported(available_extensions, num_available_extensions, extensions, *num_extensions)) {
     free(extensions);

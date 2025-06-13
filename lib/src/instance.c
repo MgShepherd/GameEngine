@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "result.h"
 #include "vk_debug_messenger_helper.h"
+#include "vk_device_management.h"
 #include "vk_instance_helper.h"
 #include <stdio.h>
 
@@ -14,6 +15,7 @@
 struct M_Instance {
   VkInstance vk_instance;
   VkDebugUtilsMessengerEXT vk_debug_messenger;
+  VkDevice vk_device;
 };
 
 enum M_Result m_instance_create(struct M_Instance **instance, const M_InstanceOptions *instance_options) {
@@ -37,6 +39,17 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_InstanceOp
     }
   }
 
+  VkPhysicalDevice physical_device;
+  result = vk_physical_device_find(&physical_device, (*instance)->vk_instance);
+  if (result != M_SUCCESS) {
+    goto instance_init_cleanup;
+  }
+
+  result = vk_device_create(&(*instance)->vk_device, physical_device);
+  if (result != M_SUCCESS) {
+    goto instance_init_cleanup;
+  }
+
   m_logger_info("Successfully initialised M_Instance");
 
 instance_init_cleanup:
@@ -50,6 +63,8 @@ instance_init_cleanup:
 
 void m_instance_destroy(M_Instance *instance) {
   if (instance != NULL) {
+    vk_device_destroy(instance->vk_device);
+    instance->vk_device = NULL;
     vk_debug_messenger_destroy(instance->vk_debug_messenger, instance->vk_instance);
     instance->vk_debug_messenger = NULL;
     vk_instance_destroy(instance->vk_instance);
