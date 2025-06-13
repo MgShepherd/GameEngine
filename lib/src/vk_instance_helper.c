@@ -3,23 +3,18 @@
 #include "instance.h"
 #include "logger.h"
 #include "result.h"
+#include "vk_debug_messenger_helper.h"
+#include "vk_utils.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
 
-const uint32_t NUM_ADDITIONAL_EXTENSIONS = 1;
+const uint32_t NUM_ADDITIONAL_EXTENSIONS = 2;
 const uint32_t NUM_VALIDATION_LAYERS = 1;
-
-enum M_Result process_vulkan_result(VkResult result) {
-  if (result != VK_SUCCESS) {
-    return m_result_process(M_VULKAN_INIT_ERR, string_VkResult(result));
-  }
-
-  return M_SUCCESS;
-}
 
 bool all_extensions_supported(const VkExtensionProperties *available_extensions, uint32_t num_available_extensions, const char **required_extensions, uint32_t num_required_extensions) {
   bool found = false;
@@ -78,6 +73,7 @@ const char **get_required_extensions(uint32_t *num_extensions) {
 
   memcpy(extensions, glfw_extensions, (*num_extensions - NUM_ADDITIONAL_EXTENSIONS) * sizeof(char *));
   extensions[*num_extensions - 1] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+  extensions[*num_extensions - 2] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 
   if (!all_extensions_supported(available_extensions, num_available_extensions, extensions, *num_extensions)) {
     free(extensions);
@@ -118,6 +114,7 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
       .pApplicationName = instance_options->app_name,
       .applicationVersion = VK_MAKE_VERSION(0, 1, 0),
+      .apiVersion = VK_API_VERSION_1_0,
   };
 
   VkInstanceCreateInfo instance_create_info = {
@@ -136,6 +133,7 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
   instance_create_info.enabledExtensionCount = num_extensions;
   instance_create_info.ppEnabledExtensionNames = extensions;
 
+  VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info;
   if (instance_options->enable_debug) {
     validation_layers = get_validation_layers();
     if (validation_layers == NULL) {
@@ -145,6 +143,9 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
 
     instance_create_info.enabledLayerCount = NUM_VALIDATION_LAYERS;
     instance_create_info.ppEnabledLayerNames = validation_layers;
+
+    vk_debug_messenger_fill_create_info(&debug_messenger_create_info);
+    instance_create_info.pNext = &debug_messenger_create_info;
     m_logger_info("Validation layers enabled");
   } else {
     instance_create_info.enabledLayerCount = 0;

@@ -11,6 +11,8 @@ enum M_LogLevel g_level = M_INFO;
 
 const char *get_log_level_str(enum M_LogLevel level) {
   switch (level) {
+  case M_VERBOSE:
+    return "VERBOSE";
   case M_INFO:
     return "INFO";
   case M_ERROR:
@@ -37,6 +39,18 @@ void display_formatted_message(enum M_LogLevel level, FILE *file, const char *me
 void m_logger_init(enum M_LogLevel level) {
   g_level = level;
   m_logger_info("Logger successfully initialised");
+}
+
+void m_logger_verbose(const char *message, ...) {
+  if (g_level > M_VERBOSE)
+    return;
+
+  va_list args;
+  va_start(args, message);
+
+  display_formatted_message(M_VERBOSE, stdout, message, args);
+
+  va_end(args);
 }
 
 void m_logger_info(const char *message, ...) {

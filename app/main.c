@@ -29,7 +29,9 @@ int main() {
 
 cleanup:
   m_instance_destroy(instance);
+  instance = NULL;
   m_window_destroy(window);
+  window = NULL;
 
   return result == M_SUCCESS ? 0 : -1;
 }

@@ -7,6 +7,8 @@ set(SOURCES
 	src/instance.c
 	src/result.c
 	src/vk_instance_helper.c
+	src/vk_debug_messenger_helper.c
+	src/vk_utils.c
 	src/window.c)
 
 find_package(Vulkan REQUIRED)

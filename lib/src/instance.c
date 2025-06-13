@@ -2,6 +2,7 @@
 #include "GLFW/glfw3.h"
 #include "logger.h"
 #include "result.h"
+#include "vk_debug_messenger_helper.h"
 #include "vk_instance_helper.h"
 #include <stdio.h>
 
@@ -12,6 +13,7 @@
 
 struct M_Instance {
   VkInstance vk_instance;
+  VkDebugUtilsMessengerEXT vk_debug_messenger;
 };
 
 enum M_Result m_instance_create(struct M_Instance **instance, const M_InstanceOptions *instance_options) {
@@ -28,11 +30,19 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_InstanceOp
     goto instance_init_cleanup;
   }
 
+  if (instance_options->enable_debug) {
+    result = vk_debug_messenger_create(&(*instance)->vk_debug_messenger, (*instance)->vk_instance);
+    if (result != M_SUCCESS) {
+      goto instance_init_cleanup;
+    }
+  }
+
   m_logger_info("Successfully initialised M_Instance");
 
 instance_init_cleanup:
   if (result != M_SUCCESS) {
     m_instance_destroy(*instance);
+    *instance = NULL;
   }
 
   return result;
@@ -40,8 +50,10 @@ instance_init_cleanup:
 
 void m_instance_destroy(M_Instance *instance) {
   if (instance != NULL) {
+    vk_debug_messenger_destroy(instance->vk_debug_messenger, instance->vk_instance);
+    instance->vk_debug_messenger = NULL;
     vk_instance_destroy(instance->vk_instance);
+    instance->vk_instance = NULL;
     free(instance);
-    instance = NULL;
   }
 }

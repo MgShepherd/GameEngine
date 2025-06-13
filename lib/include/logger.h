@@ -2,6 +2,7 @@
 #define LOGGER_H
 
 enum M_LogLevel {
+  M_VERBOSE,
   M_INFO,
   M_WARN,
   M_ERROR,
@@ -17,6 +18,14 @@ enum M_LogLevel {
  * @param level Determines which is the lowest log level that will be shown
  */
 void m_logger_init(enum M_LogLevel level);
+
+/**
+ * @brief Displays a message to stdout with log level VERBOSE
+ *
+ * @param message The format string to be displayed
+ * @param ... 		Additional arguments corresponding to the format string
+ */
+void m_logger_verbose(const char *message, ...) __attribute__((format(printf, 1, 2)));
 
 /**
  * @brief Displays a message to stdout with log level INFO
