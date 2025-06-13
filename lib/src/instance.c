@@ -1,10 +1,11 @@
 #include "instance.h"
-#include "GLFW/glfw3.h"
+#include "instance_private.h"
 #include "logger.h"
 #include "result.h"
 #include "vk_debug_messenger_helper.h"
 #include "vk_device_management.h"
 #include "vk_instance_helper.h"
+#include "window.h"
 #include <stdio.h>
 
 #include <stdlib.h>
@@ -12,13 +13,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
 
-struct M_Instance {
-  VkInstance vk_instance;
-  VkDebugUtilsMessengerEXT vk_debug_messenger;
-  VkDevice vk_device;
-};
-
-enum M_Result m_instance_create(struct M_Instance **instance, const M_InstanceOptions *instance_options) {
+enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *window, const M_InstanceOptions *instance_options) {
   enum M_Result result = M_SUCCESS;
 
   *instance = malloc(sizeof(struct M_Instance));
@@ -37,6 +32,11 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_InstanceOp
     if (result != M_SUCCESS) {
       goto instance_init_cleanup;
     }
+  }
+
+  result = m_window_surface_create(window, *instance);
+  if (result != M_SUCCESS) {
+    goto instance_init_cleanup;
   }
 
   VkPhysicalDevice physical_device;
@@ -65,6 +65,8 @@ void m_instance_destroy(M_Instance *instance) {
   if (instance != NULL) {
     vk_device_destroy(instance->vk_device);
     instance->vk_device = NULL;
+    m_window_surface_destroy(instance);
+    instance->vk_surface = NULL;
     vk_debug_messenger_destroy(instance->vk_debug_messenger, instance->vk_instance);
     instance->vk_debug_messenger = NULL;
     vk_instance_destroy(instance->vk_instance);

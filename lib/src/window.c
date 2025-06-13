@@ -1,11 +1,14 @@
 #include "window.h"
+#include "instance_private.h"
 #include "logger.h"
 #include "result.h"
+#include "vk_utils.h"
 
 #include <GLFW/glfw3.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <vulkan/vulkan_core.h>
 
 struct M_Window {
   GLFWwindow *glfw_window;
@@ -73,4 +76,16 @@ void m_window_destroy(struct M_Window *window) {
     free(window);
   }
   glfwTerminate();
+}
+
+enum M_Result m_window_surface_create(const M_Window *window, struct M_Instance *instance) {
+  assert(instance != NULL && instance->vk_instance != NULL);
+  return process_vulkan_result(glfwCreateWindowSurface(instance->vk_instance, window->glfw_window, NULL, &instance->vk_surface));
+}
+
+void m_window_surface_destroy(M_Instance *instance) {
+  assert(instance != NULL);
+  if (instance->vk_surface != NULL) {
+    vkDestroySurfaceKHR(instance->vk_instance, instance->vk_surface, NULL);
+  }
 }

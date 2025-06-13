@@ -1,7 +1,7 @@
 #ifndef INSTANCE_H
 #define INSTANCE_H
 
-#include "window.h"
+#include <stdbool.h>
 
 typedef struct {
   bool enable_debug;
@@ -10,7 +10,9 @@ typedef struct {
 
 typedef struct M_Instance M_Instance;
 
-enum M_Result m_instance_create(M_Instance **instance, const M_InstanceOptions *instance_options);
+#include "window.h"
+
+enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *window, const M_InstanceOptions *instance_options);
 void m_instance_destroy(M_Instance *instance);
 
 #endif // !INSTANCE_H

@@ -18,7 +18,7 @@ int main() {
       .app_name = app_name,
       .enable_debug = true,
   };
-  result = m_instance_create(&instance, &options);
+  result = m_instance_create(&instance, window, &options);
   if (result != M_SUCCESS) {
     goto cleanup;
   }
