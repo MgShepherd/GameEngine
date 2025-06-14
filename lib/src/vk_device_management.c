@@ -1,6 +1,7 @@
 #include "vk_device_management.h"
 #include "instance_private.h"
 #include "result.h"
+#include "vk_swap_chain_management.h"
 #include "vk_utils.h"
 
 #include <assert.h>
@@ -52,6 +53,7 @@ struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevi
   return indices;
 }
 
+// TODO: Handle errors for enumerate device extensions
 bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
   uint32_t num_available_extensions = 0;
   vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL);
@@ -77,9 +79,17 @@ bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
 
 bool vk_physical_device_is_suitable(VkPhysicalDevice device, const struct M_Instance *instance) {
   struct M_QueueFamilyIndices indices = vk_physical_device_get_queue_families(device, instance);
-  bool queues_supported = indices.graphics != UINT32_MAX && indices.present != UINT32_MAX;
+  if (indices.graphics == UINT32_MAX || indices.present == UINT32_MAX)
+    return false;
+  if (!vk_physical_device_supports_required_extensions(device))
+    return false;
 
-  return queues_supported && vk_physical_device_supports_required_extensions(device);
+  struct M_SwapChainSupport swap_support;
+  if (m_swap_chain_get_device_support(&swap_support, device, instance) != M_SUCCESS)
+    return false;
+  bool swap_chain_supported = swap_support.num_formats != 0 && swap_support.num_present_modes != 0;
+  m_swap_chain_support_destroy(&swap_support);
+  return swap_chain_supported;
 }
 
 void add_extension_if_found(const char *extension_name, VkExtensionProperties *available_extensions, uint32_t num_available_extensions, const char **found_extensions, uint32_t *num_found_extensions) {
@@ -91,6 +101,7 @@ void add_extension_if_found(const char *extension_name, VkExtensionProperties *a
   }
 }
 
+// TODO: Handle errors from enumerate device extensions
 const char **vk_device_get_extensions(VkPhysicalDevice device, uint32_t *num_extensions) {
   uint32_t num_available_extensions = 0;
   vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL);

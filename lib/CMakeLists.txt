@@ -10,6 +10,7 @@ set(SOURCES
 	src/vk_debug_messenger_helper.c
 	src/vk_utils.c
 	src/vk_device_management.c
+	src/vk_swap_chain_management.c
 	src/window.c)
 
 find_package(Vulkan REQUIRED)

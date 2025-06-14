@@ -56,6 +56,7 @@ bool all_layers_supported(const VkLayerProperties *available_layers, uint32_t nu
   return true;
 }
 
+// TODO: Handle error for first enumerate instance
 const char **get_required_extensions(uint32_t *num_extensions) {
   uint32_t num_available_extensions = 0;
   vkEnumerateInstanceExtensionProperties(NULL, &num_available_extensions, NULL);
