@@ -40,12 +40,12 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   }
 
   VkPhysicalDevice physical_device;
-  result = vk_physical_device_find(&physical_device, (*instance)->vk_instance);
+  result = vk_physical_device_find(&physical_device, *instance);
   if (result != M_SUCCESS) {
     goto instance_init_cleanup;
   }
 
-  result = vk_device_create(&(*instance)->vk_device, physical_device);
+  result = vk_device_create(*instance, physical_device);
   if (result != M_SUCCESS) {
     goto instance_init_cleanup;
   }
