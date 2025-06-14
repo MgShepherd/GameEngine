@@ -1,6 +1,5 @@
 #include "vk_device_management.h"
 #include "instance_private.h"
-#include "logger.h"
 #include "result.h"
 #include "vk_utils.h"
 
@@ -12,8 +11,10 @@
 #include <vulkan/vulkan_core.h>
 
 const uint32_t NUM_REQUIRED_QUEUES = 2;
+const uint32_t NUM_REQUIRED_EXTENSIONS = 1;
 const uint32_t NUM_OPTIONAL_EXTENSIONS = 1;
 const char *OPTIONAL_EXTENSIONS[] = {"VK_KHR_portability_subset"};
+const char *REQUIRED_EXTENSIONS[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 struct M_QueueFamilyIndices {
   uint32_t graphics;
@@ -51,10 +52,43 @@ struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevi
   return indices;
 }
 
+bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
+  uint32_t num_available_extensions = 0;
+  vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL);
+  VkExtensionProperties available_extensions[num_available_extensions];
+  vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions);
+
+  bool found = false;
+  for (uint32_t i = 0; i < NUM_REQUIRED_EXTENSIONS; i++) {
+    found = false;
+    for (uint32_t j = 0; j < num_available_extensions; j++) {
+      if (strcmp(REQUIRED_EXTENSIONS[i], available_extensions[j].extensionName)) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found)
+      return false;
+  }
+
+  return true;
+}
+
 bool vk_physical_device_is_suitable(VkPhysicalDevice device, const struct M_Instance *instance) {
   struct M_QueueFamilyIndices indices = vk_physical_device_get_queue_families(device, instance);
+  bool queues_supported = indices.graphics != UINT32_MAX && indices.present != UINT32_MAX;
 
-  return indices.graphics != UINT32_MAX && indices.present != UINT32_MAX;
+  return queues_supported && vk_physical_device_supports_required_extensions(device);
+}
+
+void add_extension_if_found(const char *extension_name, VkExtensionProperties *available_extensions, uint32_t num_available_extensions, const char **found_extensions, uint32_t *num_found_extensions) {
+  for (uint32_t j = 0; j < num_available_extensions; j++) {
+    if (strcmp(extension_name, available_extensions[j].extensionName)) {
+      found_extensions[(*num_found_extensions)++] = extension_name;
+      return;
+    }
+  }
 }
 
 const char **vk_device_get_extensions(VkPhysicalDevice device, uint32_t *num_extensions) {
@@ -63,19 +97,17 @@ const char **vk_device_get_extensions(VkPhysicalDevice device, uint32_t *num_ext
   VkExtensionProperties available_extensions[num_available_extensions];
   vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions);
 
-  const char **extensions = malloc(NUM_OPTIONAL_EXTENSIONS * sizeof(char *));
+  const char **extensions = malloc((NUM_OPTIONAL_EXTENSIONS + NUM_REQUIRED_EXTENSIONS) * sizeof(char *));
   if (extensions == NULL) {
     return NULL;
   }
 
   *num_extensions = 0;
   for (uint32_t i = 0; i < NUM_OPTIONAL_EXTENSIONS; i++) {
-    for (uint32_t j = 0; j < num_available_extensions; j++) {
-      if (strcmp(OPTIONAL_EXTENSIONS[i], available_extensions[j].extensionName)) {
-        extensions[(*num_extensions)++] = OPTIONAL_EXTENSIONS[i];
-        break;
-      }
-    }
+    add_extension_if_found(OPTIONAL_EXTENSIONS[i], available_extensions, num_available_extensions, extensions, num_extensions);
+  }
+  for (uint32_t i = 0; i < NUM_REQUIRED_EXTENSIONS; i++) {
+    add_extension_if_found(REQUIRED_EXTENSIONS[i], available_extensions, num_available_extensions, extensions, num_extensions);
   }
 
   return extensions;
@@ -150,7 +182,10 @@ enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice phy
       .ppEnabledExtensionNames = extensions,
   };
 
-  result = process_vulkan_result(vkCreateDevice(physical_device, &device_create_info, NULL, &instance->vk_device));
+  result = process_vulkan_result(vkCreateDevice(physical_device, &device_create_info, NULL, &instance->device.vk_device));
+
+  vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.graphics_queue);
+  vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.present_queue);
 
 device_cleanup:
   if (extensions != NULL) {
@@ -159,8 +194,8 @@ device_cleanup:
   return result;
 }
 
-void vk_device_destroy(VkDevice device) {
-  if (device != NULL) {
-    vkDestroyDevice(device, NULL);
+void vk_device_destroy(struct M_Device *device) {
+  if (device->vk_device != NULL) {
+    vkDestroyDevice(device->vk_device, NULL);
   }
 }

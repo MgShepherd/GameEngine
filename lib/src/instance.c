@@ -63,8 +63,8 @@ instance_init_cleanup:
 
 void m_instance_destroy(M_Instance *instance) {
   if (instance != NULL) {
-    vk_device_destroy(instance->vk_device);
-    instance->vk_device = NULL;
+    vk_device_destroy(&instance->device);
+    instance->device.vk_device = NULL;
     m_window_surface_destroy(instance);
     instance->vk_surface = NULL;
     vk_debug_messenger_destroy(instance->vk_debug_messenger, instance->vk_instance);
