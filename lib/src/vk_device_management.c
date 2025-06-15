@@ -12,48 +12,10 @@
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
-const uint32_t NUM_REQUIRED_QUEUES = 2;
 const uint32_t NUM_REQUIRED_EXTENSIONS = 1;
 const uint32_t NUM_OPTIONAL_EXTENSIONS = 1;
 const char *OPTIONAL_EXTENSIONS[] = {"VK_KHR_portability_subset"};
 const char *REQUIRED_EXTENSIONS[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
-struct M_QueueFamilyIndices {
-  uint32_t graphics;
-  uint32_t present;
-};
-
-struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevice device,
-                                                                  const struct M_Instance *instance) {
-  struct M_QueueFamilyIndices indices = {.graphics = UINT32_MAX, .present = UINT32_MAX};
-  uint32_t remaining_queues_to_find = NUM_REQUIRED_QUEUES;
-
-  uint32_t queue_family_count = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, NULL);
-  VkQueueFamilyProperties queue_family_properties[queue_family_count];
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_family_properties);
-
-  VkBool32 has_present_support = false;
-
-  for (uint32_t i = 0; i < queue_family_count; i++) {
-    if (indices.graphics == UINT32_MAX && queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphics = i;
-      remaining_queues_to_find--;
-    }
-    if (indices.present == UINT32_MAX) {
-      vkGetPhysicalDeviceSurfaceSupportKHR(device, i, instance->vk_surface, &has_present_support);
-      if (has_present_support) {
-        indices.present = i;
-        remaining_queues_to_find--;
-      }
-    }
-
-    if (remaining_queues_to_find == 0)
-      break;
-  }
-
-  return indices;
-}
 
 bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
   uint32_t num_available_extensions = 0;
@@ -143,6 +105,38 @@ void add_device_queue_create_info(VkDeviceQueueCreateInfo *create_infos, uint32_
   };
 }
 
+struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevice device,
+                                                                  const struct M_Instance *instance) {
+  struct M_QueueFamilyIndices indices = {.graphics = UINT32_MAX, .present = UINT32_MAX};
+  uint32_t remaining_queues_to_find = NUM_REQUIRED_QUEUES;
+
+  uint32_t queue_family_count = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, NULL);
+  VkQueueFamilyProperties queue_family_properties[queue_family_count];
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_family_properties);
+
+  VkBool32 has_present_support = false;
+
+  for (uint32_t i = 0; i < queue_family_count; i++) {
+    if (indices.graphics == UINT32_MAX && queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      indices.graphics = i;
+      remaining_queues_to_find--;
+    }
+    if (indices.present == UINT32_MAX) {
+      vkGetPhysicalDeviceSurfaceSupportKHR(device, i, instance->vk_surface, &has_present_support);
+      if (has_present_support) {
+        indices.present = i;
+        remaining_queues_to_find--;
+      }
+    }
+
+    if (remaining_queues_to_find == 0)
+      break;
+  }
+
+  return indices;
+}
+
 enum M_Result vk_physical_device_find(VkPhysicalDevice *physical_device, const struct M_Instance *instance) {
   assert(instance->vk_instance != NULL && instance->vk_surface != NULL);
   *physical_device = NULL;
@@ -207,5 +201,6 @@ enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice phy
 void vk_device_destroy(struct M_Device *device) {
   if (device->vk_device != NULL) {
     vkDestroyDevice(device->vk_device, NULL);
+    device->vk_device = NULL;
   }
 }

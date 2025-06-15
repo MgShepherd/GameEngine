@@ -14,6 +14,11 @@
     return result;                                                                                                     \
   }
 
+#define return_result_if_err(result)                                                                                   \
+  if (result != M_SUCCESS) {                                                                                           \
+    return result;                                                                                                     \
+  }
+
 #define return_result_if_err_clean(result, cleanup_func, ...)                                                          \
   if (result != M_SUCCESS) {                                                                                           \
     cleanup_func(__VA_ARGS__);                                                                                         \

@@ -1,9 +1,58 @@
 #include "vk_swap_chain_management.h"
+#include "GLFW/glfw3.h"
+#include "instance_private.h"
 #include "result.h"
 #include "result_utils.h"
+#include "vk_device_management.h"
 #include "vk_utils.h"
+#include "window_private.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
+
+uint32_t choose_surface_format_idx(const struct M_SwapChainSupport *swap_support) {
+  for (uint32_t i = 0; i < swap_support->num_formats; i++) {
+    if (swap_support->formats[i].format == VK_FORMAT_B8G8R8A8_SRGB &&
+        swap_support->formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+VkPresentModeKHR choose_present_mode(const struct M_SwapChainSupport *swap_support) {
+  for (uint32_t i = 0; i < swap_support->num_present_modes; i++) {
+    if (swap_support->present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+      return swap_support->present_modes[i];
+    }
+  }
+
+  return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+uint32_t clamp_between_values(int val, uint32_t min, uint32_t max) {
+  if (val < 0 || val < min)
+    return min;
+  if (val > max)
+    return max;
+  return val;
+}
+
+VkExtent2D choose_extent(const struct M_SwapChainSupport *swap_support, const M_Window *window) {
+  if (swap_support->capabilities.currentExtent.width != UINT32_MAX) {
+    return swap_support->capabilities.currentExtent;
+  }
+
+  int width, height;
+  glfwGetFramebufferSize(window->glfw_window, &width, &height);
+  VkExtent2D extent;
+  extent.width = clamp_between_values(width, swap_support->capabilities.minImageExtent.width,
+                                      swap_support->capabilities.maxImageExtent.width);
+  extent.height = clamp_between_values(height, swap_support->capabilities.minImageExtent.height,
+                                       swap_support->capabilities.maxImageExtent.height);
+
+  return extent;
+}
 
 enum M_Result m_swap_chain_get_device_support(struct M_SwapChainSupport *swap_support, VkPhysicalDevice device,
                                               const struct M_Instance *instance) {
@@ -46,4 +95,80 @@ void m_swap_chain_support_destroy(struct M_SwapChainSupport *swap_support) {
       free(swap_support->present_modes);
     }
   }
+}
+
+enum M_Result m_swap_chain_create(struct M_Instance *instance, VkPhysicalDevice physical_device,
+                                  const M_Window *window) {
+  assert(instance != NULL && instance->vk_surface != NULL && instance->vk_instance != NULL && window != NULL);
+  enum M_Result result = M_SUCCESS;
+
+  struct M_SwapChainSupport swap_support;
+  return_result_if_err(m_swap_chain_get_device_support(&swap_support, physical_device, instance));
+
+  const uint32_t format_idx = choose_surface_format_idx(&swap_support);
+  const VkPresentModeKHR present_mode = choose_present_mode(&swap_support);
+  const VkExtent2D extent = choose_extent(&swap_support, window);
+
+  uint32_t swap_image_count = swap_support.capabilities.minImageCount + 1;
+  if (swap_support.capabilities.maxImageCount > 0 && swap_image_count > swap_support.capabilities.maxImageCount) {
+    swap_image_count = swap_support.capabilities.maxImageCount;
+  }
+
+  VkSwapchainCreateInfoKHR swap_create_info = {
+      .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+      .surface = instance->vk_surface,
+      .minImageCount = swap_image_count,
+      .imageFormat = swap_support.formats[format_idx].format,
+      .imageColorSpace = swap_support.formats[format_idx].colorSpace,
+      .imageExtent = extent,
+      .imageArrayLayers = 1,
+      .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+      .preTransform = swap_support.capabilities.currentTransform,
+      .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+      .presentMode = present_mode,
+      .oldSwapchain = NULL,
+      .clipped = VK_TRUE,
+  };
+
+  const struct M_QueueFamilyIndices queue_indices = vk_physical_device_get_queue_families(physical_device, instance);
+  assert(queue_indices.present != UINT32_MAX && queue_indices.graphics != UINT32_MAX);
+
+  uint32_t indices[] = {queue_indices.present, queue_indices.graphics};
+  if (queue_indices.graphics != queue_indices.present) {
+    swap_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    swap_create_info.queueFamilyIndexCount = NUM_REQUIRED_QUEUES;
+    swap_create_info.pQueueFamilyIndices = indices;
+  } else {
+    swap_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  }
+
+  vk_return_result_if_err(
+      vkCreateSwapchainKHR(instance->device.vk_device, &swap_create_info, NULL, &instance->swapchain.vk_swapchain));
+
+  VkResult vk_result = vkGetSwapchainImagesKHR(instance->device.vk_device, instance->swapchain.vk_swapchain,
+                                               &instance->swapchain.num_images, NULL);
+  vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+  instance->swapchain.images = malloc(instance->swapchain.num_images * sizeof(VkImage));
+  return_result_if_null_clean(instance->swapchain.images, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
+                              m_swap_chain_destroy, instance);
+  vk_result = vkGetSwapchainImagesKHR(instance->device.vk_device, instance->swapchain.vk_swapchain,
+                                      &instance->swapchain.num_images, instance->swapchain.images);
+  vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+
+  instance->swapchain.extent = extent;
+  instance->swapchain.format = swap_support.formats[format_idx].format;
+
+  return result;
+}
+
+void m_swap_chain_destroy(M_Instance *instance) {
+  assert(instance != NULL && instance->device.vk_device != NULL);
+  if (instance->swapchain.images != NULL) {
+    free(instance->swapchain.images);
+  }
+  if (instance->swapchain.vk_swapchain != NULL) {
+    vkDestroySwapchainKHR(instance->device.vk_device, instance->swapchain.vk_swapchain, NULL);
+  }
+  instance->swapchain.images = NULL;
+  instance->swapchain.vk_swapchain = NULL;
 }

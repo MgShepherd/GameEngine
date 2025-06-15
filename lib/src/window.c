@@ -4,18 +4,13 @@
 #include "result.h"
 #include "result_utils.h"
 #include "vk_utils.h"
+#include "window_private.h"
 
 #include <GLFW/glfw3.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
-
-struct M_Window {
-  GLFWwindow *glfw_window;
-  int width;
-  int height;
-};
 
 void glfw_error_callback(int error, const char *description) { m_result_process(M_WINDOW_INIT_ERR, description); }
 

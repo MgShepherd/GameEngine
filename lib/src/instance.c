@@ -6,6 +6,7 @@
 #include "vk_debug_messenger_helper.h"
 #include "vk_device_management.h"
 #include "vk_instance_helper.h"
+#include "vk_swap_chain_management.h"
 #include "window.h"
 #include <stdio.h>
 
@@ -39,6 +40,9 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   result = vk_device_create(*instance, physical_device);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
+  result = m_swap_chain_create(*instance, physical_device, window);
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
+
   m_logger_info("Successfully initialised M_Instance");
 
   return result;
@@ -46,8 +50,8 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
 
 void m_instance_destroy(M_Instance *instance) {
   if (instance != NULL) {
+    m_swap_chain_destroy(instance);
     vk_device_destroy(&instance->device);
-    instance->device.vk_device = NULL;
     m_window_surface_destroy(instance);
     instance->vk_surface = NULL;
     vk_debug_messenger_destroy(instance->vk_debug_messenger, instance->vk_instance);
