@@ -17,9 +17,7 @@ struct M_Window {
   int height;
 };
 
-void glfw_error_callback(int error, const char *description) {
-  m_result_process(M_WINDOW_INIT_ERR, description);
-}
+void glfw_error_callback(int error, const char *description) { m_result_process(M_WINDOW_INIT_ERR, description); }
 
 enum M_Result m_window_create(M_Window **window, const char *title, int width, int height) {
   enum M_Result result = M_SUCCESS;
@@ -33,8 +31,7 @@ enum M_Result m_window_create(M_Window **window, const char *title, int width, i
   }
 
   *window = malloc(sizeof(struct M_Window));
-  return_result_if_null_clean(*window, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
-                              m_window_destroy, *window);
+  return_result_if_null_clean(*window, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", m_window_destroy, *window);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   (*window)->glfw_window = glfwCreateWindow(width, height, title, NULL, NULL);

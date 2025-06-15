@@ -38,7 +38,8 @@ bool all_extensions_supported(const VkExtensionProperties *available_extensions,
   return true;
 }
 
-bool all_layers_supported(const VkLayerProperties *available_layers, uint32_t num_available_layers, const char **required_layers) {
+bool all_layers_supported(const VkLayerProperties *available_layers, uint32_t num_available_layers,
+                          const char **required_layers) {
   bool found = false;
   for (uint32_t i = 0; i < NUM_VALIDATION_LAYERS; i++) {
     found = false;
@@ -128,8 +129,8 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
   uint32_t num_extensions = 0;
   extensions = get_required_extensions(&num_extensions);
   const char *extensions_failed_msg = "Unable to load required instance extensions";
-  return_result_if_null_clean(extensions, M_VULKAN_INIT_ERR, extensions_failed_msg,
-                              cleanup_vk_instance_create, extensions, validation_layers);
+  return_result_if_null_clean(extensions, M_VULKAN_INIT_ERR, extensions_failed_msg, cleanup_vk_instance_create,
+                              extensions, validation_layers);
   instance_create_info.enabledExtensionCount = num_extensions;
   instance_create_info.ppEnabledExtensionNames = extensions;
 

@@ -23,7 +23,8 @@ struct M_QueueFamilyIndices {
   uint32_t present;
 };
 
-struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevice device, const struct M_Instance *instance) {
+struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevice device,
+                                                                  const struct M_Instance *instance) {
   struct M_QueueFamilyIndices indices = {.graphics = UINT32_MAX, .present = UINT32_MAX};
   uint32_t remaining_queues_to_find = NUM_REQUIRED_QUEUES;
 
@@ -58,7 +59,8 @@ bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
   uint32_t num_available_extensions = 0;
   vk_return_false_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL));
   VkExtensionProperties available_extensions[num_available_extensions];
-  vk_return_false_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions));
+  vk_return_false_if_err(
+      vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions));
 
   bool found = false;
   for (uint32_t i = 0; i < NUM_REQUIRED_EXTENSIONS; i++) {
@@ -92,7 +94,9 @@ bool vk_physical_device_is_suitable(VkPhysicalDevice device, const struct M_Inst
   return swap_chain_supported;
 }
 
-void add_extension_if_found(const char *extension_name, VkExtensionProperties *available_extensions, uint32_t num_available_extensions, const char **found_extensions, uint32_t *num_found_extensions) {
+void add_extension_if_found(const char *extension_name, VkExtensionProperties *available_extensions,
+                            uint32_t num_available_extensions, const char **found_extensions,
+                            uint32_t *num_found_extensions) {
   for (uint32_t j = 0; j < num_available_extensions; j++) {
     if (strcmp(extension_name, available_extensions[j].extensionName)) {
       found_extensions[(*num_found_extensions)++] = extension_name;
@@ -105,23 +109,27 @@ const char **vk_device_get_extensions(VkPhysicalDevice device, uint32_t *num_ext
   uint32_t num_available_extensions = 0;
   vk_return_null_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL));
   VkExtensionProperties available_extensions[num_available_extensions];
-  vk_return_null_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions));
+  vk_return_null_if_err(
+      vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions));
 
   const char **extensions = malloc((NUM_OPTIONAL_EXTENSIONS + NUM_REQUIRED_EXTENSIONS) * sizeof(char *));
   return_null_if_null(extensions, M_MEMORY_ALLOC_ERR, "Unable to allocate memory for extensions");
 
   *num_extensions = 0;
   for (uint32_t i = 0; i < NUM_OPTIONAL_EXTENSIONS; i++) {
-    add_extension_if_found(OPTIONAL_EXTENSIONS[i], available_extensions, num_available_extensions, extensions, num_extensions);
+    add_extension_if_found(OPTIONAL_EXTENSIONS[i], available_extensions, num_available_extensions, extensions,
+                           num_extensions);
   }
   for (uint32_t i = 0; i < NUM_REQUIRED_EXTENSIONS; i++) {
-    add_extension_if_found(REQUIRED_EXTENSIONS[i], available_extensions, num_available_extensions, extensions, num_extensions);
+    add_extension_if_found(REQUIRED_EXTENSIONS[i], available_extensions, num_available_extensions, extensions,
+                           num_extensions);
   }
 
   return extensions;
 }
 
-void add_device_queue_create_info(VkDeviceQueueCreateInfo *create_infos, uint32_t *create_info_idx, uint32_t queue_index, float *priority) {
+void add_device_queue_create_info(VkDeviceQueueCreateInfo *create_infos, uint32_t *create_info_idx,
+                                  uint32_t queue_index, float *priority) {
   for (uint32_t i = 0; i < *create_info_idx; i++) {
     if (create_infos[i].queueFamilyIndex == queue_index)
       return;
@@ -184,7 +192,8 @@ enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice phy
       .ppEnabledExtensionNames = extensions,
   };
 
-  result = process_vulkan_result(vkCreateDevice(physical_device, &device_create_info, NULL, &instance->device.vk_device));
+  result =
+      process_vulkan_result(vkCreateDevice(physical_device, &device_create_info, NULL, &instance->device.vk_device));
 
   vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.graphics_queue);
   vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.present_queue);
