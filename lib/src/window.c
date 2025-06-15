@@ -2,6 +2,7 @@
 #include "instance_private.h"
 #include "logger.h"
 #include "result.h"
+#include "result_utils.h"
 #include "vk_utils.h"
 
 #include <GLFW/glfw3.h>
@@ -28,33 +29,22 @@ enum M_Result m_window_create(M_Window **window, const char *title, int width, i
 
   if (glfwInit() == GLFW_FALSE) {
     result = m_result_process(M_WINDOW_INIT_ERR, "Unable to initialise GLFW");
-    goto window_create_cleanup;
+    m_window_destroy(*window);
   }
 
   *window = malloc(sizeof(struct M_Window));
-  if (window == NULL) {
-    result = m_result_process(M_MEMORY_ALLOC_ERR, "Unable to allocate memory required for Window object");
-    goto window_create_cleanup;
-  }
+  return_result_if_null_clean(*window, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
+                              m_window_destroy, *window);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
   (*window)->glfw_window = glfwCreateWindow(width, height, title, NULL, NULL);
   (*window)->width = width;
   (*window)->height = height;
 
-  if ((*window)->glfw_window == NULL) {
-    result = m_result_process(M_WINDOW_INIT_ERR, "Unable to create GLFW Window");
-    goto window_create_cleanup;
-  }
+  return_result_if_null_clean((*window)->glfw_window, M_WINDOW_INIT_ERR, "Unable to create GLFW Window",
+                              m_window_destroy, *window);
 
   m_logger_info("Successfully initialised M_Window");
-
-window_create_cleanup:
-  if (result != M_SUCCESS) {
-    m_window_destroy(*window);
-    *window = NULL;
-  }
 
   return result;
 }
@@ -79,8 +69,11 @@ void m_window_destroy(struct M_Window *window) {
 }
 
 enum M_Result m_window_surface_create(const M_Window *window, struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
   assert(instance != NULL && instance->vk_instance != NULL);
-  return process_vulkan_result(glfwCreateWindowSurface(instance->vk_instance, window->glfw_window, NULL, &instance->vk_surface));
+  VkResult vk_result = glfwCreateWindowSurface(instance->vk_instance, window->glfw_window, NULL, &instance->vk_surface);
+  vk_return_result_if_err(vk_result);
+  return result;
 }
 
 void m_window_surface_destroy(M_Instance *instance) {

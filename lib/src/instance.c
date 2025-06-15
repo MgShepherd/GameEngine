@@ -2,6 +2,7 @@
 #include "instance_private.h"
 #include "logger.h"
 #include "result.h"
+#include "result_utils.h"
 #include "vk_debug_messenger_helper.h"
 #include "vk_device_management.h"
 #include "vk_instance_helper.h"
@@ -17,46 +18,26 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   enum M_Result result = M_SUCCESS;
 
   *instance = malloc(sizeof(struct M_Instance));
-  if (*instance == NULL) {
-    result = m_result_process(M_MEMORY_ALLOC_ERR, "Unable to allocate required memory for M_Instance struct");
-    goto instance_init_cleanup;
-  }
-
+  return_result_if_null_clean(*instance, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", m_instance_destroy, *instance);
   result = vk_instance_create(&(*instance)->vk_instance, instance_options);
-  if (result != M_SUCCESS) {
-    goto instance_init_cleanup;
-  }
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   if (instance_options->enable_debug) {
     result = vk_debug_messenger_create(&(*instance)->vk_debug_messenger, (*instance)->vk_instance);
-    if (result != M_SUCCESS) {
-      goto instance_init_cleanup;
-    }
+    return_result_if_err_clean(result, m_instance_destroy, *instance);
   }
 
   result = m_window_surface_create(window, *instance);
-  if (result != M_SUCCESS) {
-    goto instance_init_cleanup;
-  }
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   VkPhysicalDevice physical_device;
   result = vk_physical_device_find(&physical_device, *instance);
-  if (result != M_SUCCESS) {
-    goto instance_init_cleanup;
-  }
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   result = vk_device_create(*instance, physical_device);
-  if (result != M_SUCCESS) {
-    goto instance_init_cleanup;
-  }
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   m_logger_info("Successfully initialised M_Instance");
-
-instance_init_cleanup:
-  if (result != M_SUCCESS) {
-    m_instance_destroy(*instance);
-    *instance = NULL;
-  }
 
   return result;
 }

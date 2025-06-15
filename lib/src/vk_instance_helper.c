@@ -3,6 +3,7 @@
 #include "instance.h"
 #include "logger.h"
 #include "result.h"
+#include "result_utils.h"
 #include "vk_debug_messenger_helper.h"
 #include "vk_utils.h"
 
@@ -16,7 +17,8 @@
 const uint32_t NUM_ADDITIONAL_EXTENSIONS = 3;
 const uint32_t NUM_VALIDATION_LAYERS = 1;
 
-bool all_extensions_supported(const VkExtensionProperties *available_extensions, uint32_t num_available_extensions, const char **required_extensions, uint32_t num_required_extensions) {
+bool all_extensions_supported(const VkExtensionProperties *available_extensions, uint32_t num_available_extensions,
+                              const char **required_extensions, uint32_t num_required_extensions) {
   bool found = false;
   for (uint32_t i = 0; i < num_required_extensions; i++) {
     found = false;
@@ -56,21 +58,16 @@ bool all_layers_supported(const VkLayerProperties *available_layers, uint32_t nu
   return true;
 }
 
-// TODO: Handle error for first enumerate instance
 const char **get_required_extensions(uint32_t *num_extensions) {
   uint32_t num_available_extensions = 0;
-  vkEnumerateInstanceExtensionProperties(NULL, &num_available_extensions, NULL);
+  vk_return_null_if_err(vkEnumerateInstanceExtensionProperties(NULL, &num_available_extensions, NULL));
   VkExtensionProperties available_extensions[num_available_extensions];
-  const enum M_Result result = process_vulkan_result(vkEnumerateInstanceExtensionProperties(NULL, &num_available_extensions, available_extensions));
-  if (result != M_SUCCESS)
-    return NULL;
+  vk_return_null_if_err(vkEnumerateInstanceExtensionProperties(NULL, &num_available_extensions, available_extensions));
 
   const char **glfw_extensions = glfwGetRequiredInstanceExtensions(num_extensions);
   *num_extensions += NUM_ADDITIONAL_EXTENSIONS;
   const char **extensions = malloc(*num_extensions * sizeof(char *));
-  if (extensions == NULL) {
-    return NULL;
-  }
+  return_null_if_null(extensions, M_MEMORY_ALLOC_ERR, "Unable to allocate memory");
 
   memcpy(extensions, glfw_extensions, (*num_extensions - NUM_ADDITIONAL_EXTENSIONS) * sizeof(char *));
   extensions[*num_extensions - 1] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
@@ -87,16 +84,12 @@ const char **get_required_extensions(uint32_t *num_extensions) {
 
 const char **get_validation_layers() {
   uint32_t num_available_layers = 0;
-  vkEnumerateInstanceLayerProperties(&num_available_layers, NULL);
+  vk_return_null_if_err(vkEnumerateInstanceLayerProperties(&num_available_layers, NULL));
   VkLayerProperties available_layers[num_available_layers];
-  const enum M_Result result = process_vulkan_result(vkEnumerateInstanceLayerProperties(&num_available_layers, available_layers));
-  if (result != M_SUCCESS)
-    return NULL;
+  vk_return_null_if_err(vkEnumerateInstanceLayerProperties(&num_available_layers, available_layers));
 
   const char **required_layers = malloc(NUM_VALIDATION_LAYERS * sizeof(char *));
-  if (required_layers == NULL) {
-    return NULL;
-  }
+  return_null_if_null(required_layers, M_MEMORY_ALLOC_ERR, "Unable to allocate memory");
   required_layers[0] = "VK_LAYER_KHRONOS_validation";
 
   if (!all_layers_supported(available_layers, num_available_layers, required_layers)) {
@@ -105,6 +98,13 @@ const char **get_validation_layers() {
   }
 
   return required_layers;
+}
+
+void cleanup_vk_instance_create(const char **extensions, const char **validation_layers) {
+  if (extensions != NULL)
+    free(extensions);
+  if (validation_layers != NULL)
+    free(validation_layers);
 }
 
 enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOptions *instance_options) {
@@ -127,21 +127,18 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
 
   uint32_t num_extensions = 0;
   extensions = get_required_extensions(&num_extensions);
-  if (extensions == NULL) {
-    result = m_result_process(M_VULKAN_INIT_ERR, "Unable to load required instance extensions");
-    goto vk_instance_init_cleanup;
-  }
-
+  const char *extensions_failed_msg = "Unable to load required instance extensions";
+  return_result_if_null_clean(extensions, M_VULKAN_INIT_ERR, extensions_failed_msg,
+                              cleanup_vk_instance_create, extensions, validation_layers);
   instance_create_info.enabledExtensionCount = num_extensions;
   instance_create_info.ppEnabledExtensionNames = extensions;
 
   VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info;
   if (instance_options->enable_debug) {
     validation_layers = get_validation_layers();
-    if (validation_layers == NULL) {
-      result = m_result_process(M_VULKAN_INIT_ERR, "Unable to load requested validation layers");
-      goto vk_instance_init_cleanup;
-    }
+    const char *validations_failed_msg = "Unable to load requested validation layers";
+    return_result_if_null_clean(validation_layers, M_VULKAN_INIT_ERR, validations_failed_msg,
+                                cleanup_vk_instance_create, extensions, validation_layers);
 
     instance_create_info.enabledLayerCount = NUM_VALIDATION_LAYERS;
     instance_create_info.ppEnabledLayerNames = validation_layers;
@@ -153,16 +150,10 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
     instance_create_info.enabledLayerCount = 0;
   }
 
-  result = process_vulkan_result(vkCreateInstance(&instance_create_info, NULL, vk_instance));
-  if (result != M_SUCCESS)
-    goto vk_instance_init_cleanup;
+  VkResult vk_result = vkCreateInstance(&instance_create_info, NULL, vk_instance);
+  vk_return_result_if_err_clean(vk_result, cleanup_vk_instance_create, extensions, validation_layers);
 
-vk_instance_init_cleanup:
-  if (extensions != NULL)
-    free(extensions);
-  if (validation_layers != NULL)
-    free(validation_layers);
-
+  cleanup_vk_instance_create(extensions, validation_layers);
   return result;
 }
 

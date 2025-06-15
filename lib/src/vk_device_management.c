@@ -1,6 +1,7 @@
 #include "vk_device_management.h"
 #include "instance_private.h"
 #include "result.h"
+#include "result_utils.h"
 #include "vk_swap_chain_management.h"
 #include "vk_utils.h"
 
@@ -53,12 +54,11 @@ struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevi
   return indices;
 }
 
-// TODO: Handle errors for enumerate device extensions
 bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
   uint32_t num_available_extensions = 0;
-  vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL);
+  vk_return_false_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL));
   VkExtensionProperties available_extensions[num_available_extensions];
-  vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions);
+  vk_return_false_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions));
 
   bool found = false;
   for (uint32_t i = 0; i < NUM_REQUIRED_EXTENSIONS; i++) {
@@ -85,8 +85,8 @@ bool vk_physical_device_is_suitable(VkPhysicalDevice device, const struct M_Inst
     return false;
 
   struct M_SwapChainSupport swap_support;
-  if (m_swap_chain_get_device_support(&swap_support, device, instance) != M_SUCCESS)
-    return false;
+  return_false_if_err(m_swap_chain_get_device_support(&swap_support, device, instance));
+
   bool swap_chain_supported = swap_support.num_formats != 0 && swap_support.num_present_modes != 0;
   m_swap_chain_support_destroy(&swap_support);
   return swap_chain_supported;
@@ -101,17 +101,14 @@ void add_extension_if_found(const char *extension_name, VkExtensionProperties *a
   }
 }
 
-// TODO: Handle errors from enumerate device extensions
 const char **vk_device_get_extensions(VkPhysicalDevice device, uint32_t *num_extensions) {
   uint32_t num_available_extensions = 0;
-  vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL);
+  vk_return_null_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL));
   VkExtensionProperties available_extensions[num_available_extensions];
-  vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions);
+  vk_return_null_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, available_extensions));
 
   const char **extensions = malloc((NUM_OPTIONAL_EXTENSIONS + NUM_REQUIRED_EXTENSIONS) * sizeof(char *));
-  if (extensions == NULL) {
-    return NULL;
-  }
+  return_null_if_null(extensions, M_MEMORY_ALLOC_ERR, "Unable to allocate memory for extensions");
 
   *num_extensions = 0;
   for (uint32_t i = 0; i < NUM_OPTIONAL_EXTENSIONS; i++) {
@@ -140,14 +137,12 @@ void add_device_queue_create_info(VkDeviceQueueCreateInfo *create_infos, uint32_
 
 enum M_Result vk_physical_device_find(VkPhysicalDevice *physical_device, const struct M_Instance *instance) {
   assert(instance->vk_instance != NULL && instance->vk_surface != NULL);
-
-  enum M_Result result = M_SUCCESS;
   *physical_device = NULL;
 
   uint32_t device_count = 0;
-  vkEnumeratePhysicalDevices(instance->vk_instance, &device_count, NULL);
+  vk_return_result_if_err(vkEnumeratePhysicalDevices(instance->vk_instance, &device_count, NULL));
   VkPhysicalDevice available_devices[device_count];
-  vkEnumeratePhysicalDevices(instance->vk_instance, &device_count, available_devices);
+  vk_return_result_if_err(vkEnumeratePhysicalDevices(instance->vk_instance, &device_count, available_devices));
 
   for (uint32_t i = 0; i < device_count; i++) {
     if (vk_physical_device_is_suitable(available_devices[i], instance)) {
@@ -156,9 +151,8 @@ enum M_Result vk_physical_device_find(VkPhysicalDevice *physical_device, const s
     }
   }
 
-  if (*physical_device == NULL) {
-    result = m_result_process(M_VULKAN_INIT_ERR, "Unable to find a Graphics Device with required features");
-  }
+  enum M_Result result = M_SUCCESS;
+  return_result_if_null(*physical_device, M_VULKAN_INIT_ERR, "Unable to find a Graphics Device with required features");
 
   return result;
 }
@@ -179,10 +173,7 @@ enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice phy
 
   uint32_t num_device_extensions = 0;
   const char **extensions = vk_device_get_extensions(physical_device, &num_device_extensions);
-  if (extensions == NULL) {
-    result = m_result_process(M_VULKAN_INIT_ERR, "Unable to load required device extensions");
-    goto device_cleanup;
-  }
+  return_result_if_null(extensions, M_VULKAN_INIT_ERR, "Unable to load required device extensions");
 
   VkDeviceCreateInfo device_create_info = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -198,7 +189,6 @@ enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice phy
   vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.graphics_queue);
   vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.present_queue);
 
-device_cleanup:
   if (extensions != NULL) {
     free(extensions);
   }
