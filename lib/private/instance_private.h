@@ -1,6 +1,7 @@
 #ifndef M_INSTANCE_PRIVATE_H
 #define M_INSTANCE_PRIVATE_H
 
+#include "pipeline_management.h"
 #include "vk_device_management.h"
 #include "vk_swap_chain_management.h"
 #include <vulkan/vulkan_core.h>
@@ -11,6 +12,7 @@ struct M_Instance {
   struct M_Device device;
   VkSurfaceKHR vk_surface;
   struct M_SwapChain swapchain;
+  struct M_Pipeline pipeline;
 };
 
 #endif // !M_INSTANCE_PRIVATE_H

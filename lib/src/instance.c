@@ -55,6 +55,7 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
 
 void m_instance_destroy(M_Instance *instance) {
   if (instance != NULL) {
+    m_pipeline_destroy(instance);
     m_swap_chain_destroy(instance);
     vk_device_destroy(&instance->device);
     m_window_surface_destroy(instance);
