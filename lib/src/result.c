@@ -22,6 +22,8 @@ const char *m_result_to_string(enum M_Result result) {
     return "WINDOW_INIT";
   case M_MEMORY_ALLOC_ERR:
     return "MEMORY_ALLOCATION";
+  case M_FILE_READ_ERR:
+    return "FILE_READ_ERROR";
   }
 }
 

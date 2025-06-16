@@ -5,7 +5,8 @@ enum M_Result {
   M_SUCCESS,
   M_WINDOW_INIT_ERR,
   M_VULKAN_INIT_ERR,
-  M_MEMORY_ALLOC_ERR
+  M_MEMORY_ALLOC_ERR,
+  M_FILE_READ_ERR,
 };
 
 const char *m_result_to_string(enum M_Result result);

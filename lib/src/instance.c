@@ -1,8 +1,10 @@
 #include "instance.h"
 #include "instance_private.h"
 #include "logger.h"
+#include "pipeline_management.h"
 #include "result.h"
 #include "result_utils.h"
+#include "shader_management.h"
 #include "vk_debug_messenger_helper.h"
 #include "vk_device_management.h"
 #include "vk_instance_helper.h"
@@ -41,6 +43,9 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   result = m_swap_chain_create(*instance, physical_device, window);
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
+
+  result = m_pipeline_create(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   m_logger_info("Successfully initialised M_Instance");

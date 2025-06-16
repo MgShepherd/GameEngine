@@ -11,6 +11,8 @@ set(SOURCES
 	src/vk_utils.c
 	src/vk_device_management.c
 	src/vk_swap_chain_management.c
+	src/shader_management.c
+	src/pipeline_management.c
 	src/window.c)
 
 find_package(Vulkan REQUIRED)
