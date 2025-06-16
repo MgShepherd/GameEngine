@@ -16,6 +16,7 @@ struct M_SwapChainSupport {
 struct M_SwapChain {
   VkSwapchainKHR vk_swapchain;
   VkImage *images;
+  VkImageView *image_views;
   uint32_t num_images;
   VkFormat format;
   VkExtent2D extent;

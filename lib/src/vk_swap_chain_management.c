@@ -54,6 +54,60 @@ VkExtent2D choose_extent(const struct M_SwapChainSupport *swap_support, const M_
   return extent;
 }
 
+enum M_Result get_swapchain_images(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+
+  VkResult vk_result = vkGetSwapchainImagesKHR(instance->device.vk_device, instance->swapchain.vk_swapchain,
+                                               &instance->swapchain.num_images, NULL);
+  vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+  instance->swapchain.images = malloc(instance->swapchain.num_images * sizeof(VkImage));
+  return_result_if_null_clean(instance->swapchain.images, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
+                              m_swap_chain_destroy, instance);
+  vk_result = vkGetSwapchainImagesKHR(instance->device.vk_device, instance->swapchain.vk_swapchain,
+                                      &instance->swapchain.num_images, instance->swapchain.images);
+  vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+
+  return result;
+}
+
+enum M_Result get_swapchain_image_views(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+
+  instance->swapchain.image_views = malloc(instance->swapchain.num_images * sizeof(VkImageView));
+  return_result_if_null_clean(instance->swapchain.images, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
+                              m_swap_chain_destroy, instance);
+
+  for (uint32_t i = 0; i < instance->swapchain.num_images; i++) {
+    VkImageViewCreateInfo create_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = instance->swapchain.images[i],
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = instance->swapchain.format,
+        .components =
+            {
+                .r = VK_COMPONENT_SWIZZLE_R,
+                .g = VK_COMPONENT_SWIZZLE_G,
+                .b = VK_COMPONENT_SWIZZLE_B,
+                .a = VK_COMPONENT_SWIZZLE_A,
+            },
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
+
+    VkResult vk_result =
+        vkCreateImageView(instance->device.vk_device, &create_info, NULL, &instance->swapchain.image_views[i]);
+    vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+  }
+
+  return result;
+}
+
 enum M_Result m_swap_chain_get_device_support(struct M_SwapChainSupport *swap_support, VkPhysicalDevice device,
                                               const struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
@@ -145,24 +199,23 @@ enum M_Result m_swap_chain_create(struct M_Instance *instance, VkPhysicalDevice 
   vk_return_result_if_err(
       vkCreateSwapchainKHR(instance->device.vk_device, &swap_create_info, NULL, &instance->swapchain.vk_swapchain));
 
-  VkResult vk_result = vkGetSwapchainImagesKHR(instance->device.vk_device, instance->swapchain.vk_swapchain,
-                                               &instance->swapchain.num_images, NULL);
-  vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
-  instance->swapchain.images = malloc(instance->swapchain.num_images * sizeof(VkImage));
-  return_result_if_null_clean(instance->swapchain.images, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
-                              m_swap_chain_destroy, instance);
-  vk_result = vkGetSwapchainImagesKHR(instance->device.vk_device, instance->swapchain.vk_swapchain,
-                                      &instance->swapchain.num_images, instance->swapchain.images);
-  vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
-
   instance->swapchain.extent = extent;
   instance->swapchain.format = swap_support.formats[format_idx].format;
+
+  return_result_if_err(get_swapchain_images(instance));
+  return_result_if_err(get_swapchain_image_views(instance));
 
   return result;
 }
 
 void m_swap_chain_destroy(M_Instance *instance) {
   assert(instance != NULL && instance->device.vk_device != NULL);
+  if (instance->swapchain.image_views != NULL) {
+    for (uint32_t i = 0; i < instance->swapchain.num_images; i++) {
+      vkDestroyImageView(instance->device.vk_device, instance->swapchain.image_views[i], NULL);
+    }
+    free(instance->swapchain.image_views);
+  }
   if (instance->swapchain.images != NULL) {
     free(instance->swapchain.images);
   }
