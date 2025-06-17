@@ -6,6 +6,8 @@
 
 struct M_Pipeline {
   VkPipelineLayout layout;
+  VkRenderPass render_pass;
+  VkPipeline vk_pipeline;
 };
 
 enum M_Result m_pipeline_create(M_Instance *instance);

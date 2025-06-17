@@ -6,11 +6,16 @@
 #include "shader_management.h"
 #include "vk_swap_chain_management.h"
 #include "vk_utils.h"
+#include <assert.h>
+#include <stdlib.h>
 #include <vulkan/vulkan_core.h>
 
+const uint32_t NUM_SHADER_STAGES = 2;
+
 struct M_PipelineStages {
-  VkPipelineShaderStageCreateInfo vert_shader_stage;
-  VkPipelineShaderStageCreateInfo frag_shader_stage;
+  VkViewport *viewport;
+  VkRect2D *scissor;
+  VkPipelineShaderStageCreateInfo *shader_stages;
   VkPipelineVertexInputStateCreateInfo vertex_input_state;
   VkPipelineInputAssemblyStateCreateInfo input_assembly_state;
   VkPipelineViewportStateCreateInfo viewport_state;
@@ -112,24 +117,61 @@ create_color_blend_state(const VkPipelineColorBlendAttachmentState *color_blend_
   };
 }
 
+void cleanup_shader_stage_create(VkShaderModule vert_shader, VkShaderModule frag_shader, VkViewport *viewport,
+                                 VkRect2D *scissor, const struct M_Instance *instance) {
+  m_shader_modules_destroy(vert_shader, frag_shader, instance);
+  if (viewport != NULL) {
+    free(viewport);
+  }
+  if (scissor != NULL) {
+    free(scissor);
+  }
+}
+
+void destroy_shader_stages(struct M_PipelineStages *stages, const M_Instance *instance) {
+  if (stages->shader_stages != NULL) {
+    cleanup_shader_stage_create(stages->shader_stages[0].module, stages->shader_stages[1].module, stages->viewport,
+                                stages->scissor, instance);
+    free(stages->shader_stages);
+    stages->shader_stages = NULL;
+  }
+}
+
 enum M_Result create_shader_stages(struct M_PipelineStages *stages, struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
+  VkViewport *viewport = NULL;
+  VkRect2D *scissor = NULL;
 
   VkShaderModule vert_shader_module, frag_shader_module;
   m_shader_modules_create(&vert_shader_module, &frag_shader_module, instance);
   return_result_if_err(result);
 
-  const VkViewport viewport = create_viewport(&instance->swapchain);
-  const VkRect2D scissor = create_scissor(&instance->swapchain);
+  viewport = malloc(sizeof(VkViewport));
+  return_result_if_null_clean(viewport, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", cleanup_shader_stage_create,
+                              vert_shader_module, frag_shader_module, viewport, scissor, instance);
+  scissor = malloc(sizeof(VkRect2D));
+  return_result_if_null_clean(viewport, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", cleanup_shader_stage_create,
+                              vert_shader_module, frag_shader_module, viewport, scissor, instance);
+  *viewport = create_viewport(&instance->swapchain);
+  *scissor = create_scissor(&instance->swapchain);
 
   const VkPipelineColorBlendAttachmentState color_blend_attachment_state = create_color_blend_attachment_state();
 
+  VkPipelineShaderStageCreateInfo *shader_stages_create_info =
+      malloc(NUM_SHADER_STAGES * sizeof(VkPipelineShaderStageCreateInfo));
+  return_result_if_null_clean(shader_stages_create_info, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
+                              cleanup_shader_stage_create, vert_shader_module, frag_shader_module, viewport, scissor,
+                              instance);
+  shader_stages_create_info[0] = create_shader_stage(vert_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
+  shader_stages_create_info[1] = create_shader_stage(frag_shader_module, VK_SHADER_STAGE_FRAGMENT_BIT);
+
   *stages = (struct M_PipelineStages){
-      .vert_shader_stage = create_shader_stage(vert_shader_module, VK_SHADER_STAGE_VERTEX_BIT),
-      .frag_shader_stage = create_shader_stage(frag_shader_module, VK_SHADER_STAGE_FRAGMENT_BIT),
+      .viewport = viewport,
+      .scissor = scissor,
+      .shader_stages = shader_stages_create_info,
       .vertex_input_state = create_vertex_input_state(),
       .input_assembly_state = create_input_assembly_state(),
-      .viewport_state = create_viewport_state(&viewport, &scissor),
+      .viewport_state = create_viewport_state(viewport, scissor),
       .rasterization_state = create_rasterization_state(),
       .multisample_state = create_multisample_state(),
       .color_blend_attachment_state = color_blend_attachment_state,
@@ -137,6 +179,32 @@ enum M_Result create_shader_stages(struct M_PipelineStages *stages, struct M_Ins
   };
 
   return result;
+}
+
+VkAttachmentDescription create_color_attachment(const struct M_Instance *instance) {
+  return (VkAttachmentDescription){
+      .format = instance->swapchain.format,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+  };
+}
+
+VkAttachmentReference create_color_ref() {
+  return (VkAttachmentReference){
+      .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      .attachment = 0,
+  };
+}
+
+VkSubpassDescription create_subpass(const VkAttachmentReference *color_ref) {
+  return (VkSubpassDescription){
+      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+      .colorAttachmentCount = 1,
+      .pColorAttachments = color_ref,
+  };
 }
 
 enum M_Result create_pipeline_layout(struct M_Instance *instance) {
@@ -152,23 +220,70 @@ enum M_Result create_pipeline_layout(struct M_Instance *instance) {
   return result;
 };
 
-void destroy_shader_stages(struct M_PipelineStages *stages, const struct M_Instance *instance) {
-  m_shader_modules_destroy(stages->vert_shader_stage.module, stages->frag_shader_stage.module, instance);
+enum M_Result create_render_pass(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+
+  const VkAttachmentDescription color_attachment = create_color_attachment(instance);
+  const VkAttachmentReference color_attachment_ref = create_color_ref();
+  const VkSubpassDescription subpass = create_subpass(&color_attachment_ref);
+
+  const VkRenderPassCreateInfo create_info = {
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+      .attachmentCount = 1,
+      .pAttachments = &color_attachment,
+      .subpassCount = 1,
+      .pSubpasses = &subpass,
+  };
+
+  VkResult vk_result =
+      vkCreateRenderPass(instance->device.vk_device, &create_info, NULL, &instance->pipeline.render_pass);
+  vk_return_result_if_err_clean(vk_result, m_pipeline_destroy, instance);
+
+  return result;
 }
 
 enum M_Result m_pipeline_create(struct M_Instance *instance) {
+  assert(instance->vk_instance != NULL && instance->device.vk_device != NULL);
   enum M_Result result = M_SUCCESS;
 
   struct M_PipelineStages stages;
   return_result_if_err(create_shader_stages(&stages, instance));
   return_result_if_err(create_pipeline_layout(instance));
+  return_result_if_err(create_render_pass(instance));
+
+  const VkGraphicsPipelineCreateInfo create_info = {
+      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .stageCount = 2,
+      .pStages = stages.shader_stages,
+      .pVertexInputState = &stages.vertex_input_state,
+      .pInputAssemblyState = &stages.input_assembly_state,
+      .pViewportState = &stages.viewport_state,
+      .pRasterizationState = &stages.rasterization_state,
+      .pMultisampleState = &stages.multisample_state,
+      .pColorBlendState = &stages.color_blend_state,
+      .layout = instance->pipeline.layout,
+      .renderPass = instance->pipeline.render_pass,
+      .subpass = 0,
+  };
+
+  VkResult vk_result = vkCreateGraphicsPipelines(instance->device.vk_device, NULL, 1, &create_info, NULL,
+                                                 &instance->pipeline.vk_pipeline);
 
   destroy_shader_stages(&stages, instance);
+  vk_return_result_if_err_clean(vk_result, m_pipeline_destroy, instance);
 
   return result;
 }
 
 void m_pipeline_destroy(M_Instance *instance) {
+  if (instance->pipeline.vk_pipeline != NULL) {
+    vkDestroyPipeline(instance->device.vk_device, instance->pipeline.vk_pipeline, NULL);
+    instance->pipeline.vk_pipeline = NULL;
+  }
+  if (instance->pipeline.render_pass != NULL) {
+    vkDestroyRenderPass(instance->device.vk_device, instance->pipeline.render_pass, NULL);
+    instance->pipeline.render_pass = NULL;
+  }
   if (instance->pipeline.layout != NULL) {
     vkDestroyPipelineLayout(instance->device.vk_device, instance->pipeline.layout, NULL);
     instance->pipeline.layout = NULL;
