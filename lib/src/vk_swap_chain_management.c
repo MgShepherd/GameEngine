@@ -208,8 +208,42 @@ enum M_Result m_swap_chain_create(struct M_Instance *instance, VkPhysicalDevice 
   return result;
 }
 
+enum M_Result m_swap_chain_framebuffers_create(M_Instance *instance) {
+  assert(instance->device.vk_device != NULL && instance->swapchain.image_views != NULL &&
+         instance->pipeline.render_pass != NULL);
+  enum M_Result result = M_SUCCESS;
+
+  instance->swapchain.framebuffers = malloc(instance->swapchain.num_images * sizeof(VkFramebuffer));
+  return_result_if_null(instance->swapchain.framebuffers, M_MEMORY_ALLOC_ERR, "Unable to allocate memory");
+  VkFramebufferCreateInfo create_info = {
+      .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+      .renderPass = instance->pipeline.render_pass,
+      .attachmentCount = 1,
+      .width = instance->swapchain.extent.width,
+      .height = instance->swapchain.extent.height,
+      .layers = 1,
+  };
+
+  VkResult vk_result;
+  for (uint32_t i = 0; i < instance->swapchain.num_images; i++) {
+    create_info.pAttachments = &instance->swapchain.image_views[i];
+
+    vk_result =
+        vkCreateFramebuffer(instance->device.vk_device, &create_info, NULL, &instance->swapchain.framebuffers[i]);
+    vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+  }
+
+  return result;
+}
+
 void m_swap_chain_destroy(M_Instance *instance) {
-  assert(instance != NULL && instance->device.vk_device != NULL);
+  assert(instance->device.vk_device != NULL);
+  if (instance->swapchain.framebuffers != NULL) {
+    for (uint32_t i = 0; i < instance->swapchain.num_images; i++) {
+      vkDestroyFramebuffer(instance->device.vk_device, instance->swapchain.framebuffers[i], NULL);
+    }
+    free(instance->swapchain.framebuffers);
+  }
   if (instance->swapchain.image_views != NULL) {
     for (uint32_t i = 0; i < instance->swapchain.num_images; i++) {
       vkDestroyImageView(instance->device.vk_device, instance->swapchain.image_views[i], NULL);
@@ -222,6 +256,7 @@ void m_swap_chain_destroy(M_Instance *instance) {
   if (instance->swapchain.vk_swapchain != NULL) {
     vkDestroySwapchainKHR(instance->device.vk_device, instance->swapchain.vk_swapchain, NULL);
   }
+  instance->swapchain.framebuffers = NULL;
   instance->swapchain.images = NULL;
   instance->swapchain.vk_swapchain = NULL;
 }

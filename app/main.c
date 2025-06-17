@@ -24,6 +24,10 @@ int main() {
   }
 
   while (m_window_is_open(window)) {
+    result = m_instance_update(instance);
+    if (result != M_SUCCESS) {
+      goto cleanup;
+    }
     m_window_update(window);
   }
 

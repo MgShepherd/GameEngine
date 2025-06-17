@@ -1,0 +1,171 @@
+#include "render_management.h"
+#include "instance_private.h"
+#include "logger.h"
+#include "result_utils.h"
+#include "vk_device_management.h"
+#include "vk_utils.h"
+#include <vulkan/vulkan_core.h>
+
+enum M_Result create_command_pool(struct M_Instance *instance, const VkPhysicalDevice physical_device) {
+  enum M_Result result = M_SUCCESS;
+
+  const struct M_QueueFamilyIndices queue_families = vk_physical_device_get_queue_families(physical_device, instance);
+
+  const VkCommandPoolCreateInfo create_info = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+      .queueFamilyIndex = queue_families.graphics,
+  };
+
+  const VkResult vk_result =
+      vkCreateCommandPool(instance->device.vk_device, &create_info, NULL, &instance->renderer.command_pool);
+  vk_return_result_if_err(vk_result);
+
+  return result;
+}
+
+enum M_Result allocate_command_buffers(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+
+  const VkCommandBufferAllocateInfo allocate_info = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      .commandPool = instance->renderer.command_pool,
+      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      .commandBufferCount = 1,
+  };
+
+  const VkResult vk_result =
+      vkAllocateCommandBuffers(instance->device.vk_device, &allocate_info, &instance->renderer.command_buffer);
+  vk_return_result_if_err_clean(vk_result, m_renderer_destroy, instance);
+
+  return result;
+}
+
+enum M_Result create_sync_objects(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+  const VkSemaphoreCreateInfo semaphore_create_info = {
+      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+  };
+  const VkFenceCreateInfo fence_create_info = {
+      .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+      .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+  };
+
+  VkResult vk_result =
+      vkCreateSemaphore(instance->device.vk_device, &semaphore_create_info, NULL, &instance->renderer.image_available);
+  vk_return_result_if_err_clean(vk_result, m_renderer_destroy, instance);
+  vk_result =
+      vkCreateSemaphore(instance->device.vk_device, &semaphore_create_info, NULL, &instance->renderer.render_finished);
+  vk_return_result_if_err_clean(vk_result, m_renderer_destroy, instance);
+  vk_result = vkCreateFence(instance->device.vk_device, &fence_create_info, NULL, &instance->renderer.in_flight);
+  vk_return_result_if_err_clean(vk_result, m_renderer_destroy, instance);
+
+  return result;
+}
+
+enum M_Result m_renderer_record(struct M_Instance *instance, uint32_t image_idx) {
+  enum M_Result result = M_SUCCESS;
+
+  const VkCommandBufferBeginInfo begin_info = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+  };
+
+  vk_return_result_if_err(vkBeginCommandBuffer(instance->renderer.command_buffer, &begin_info));
+
+  const VkClearValue clear_color = {.color = {.float32 = {1.0f, 0.0f, 0.0f, 1.0f}}};
+  const VkRenderPassBeginInfo render_begin_info = {
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+      .renderPass = instance->pipeline.render_pass,
+      .framebuffer = instance->swapchain.framebuffers[image_idx],
+      .renderArea =
+          {
+              .offset = {.x = 0, .y = 0},
+              .extent = instance->swapchain.extent,
+          },
+      .clearValueCount = 1,
+      .pClearValues = &clear_color,
+  };
+
+  vkCmdBeginRenderPass(instance->renderer.command_buffer, &render_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBindPipeline(instance->renderer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, instance->pipeline.vk_pipeline);
+
+  vkCmdDraw(instance->renderer.command_buffer, 3, 1, 0, 0);
+
+  vkCmdEndRenderPass(instance->renderer.command_buffer);
+
+  vk_return_result_if_err(vkEndCommandBuffer(instance->renderer.command_buffer));
+
+  return result;
+}
+
+enum M_Result m_renderer_create(struct M_Instance *instance, const VkPhysicalDevice physical_device) {
+  enum M_Result result = M_SUCCESS;
+
+  return_result_if_err(create_command_pool(instance, physical_device));
+  return_result_if_err(allocate_command_buffers(instance));
+  return_result_if_err(create_sync_objects(instance));
+
+  return result;
+}
+
+enum M_Result m_renderer_render(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+  vk_return_result_if_err(
+      vkWaitForFences(instance->device.vk_device, 1, &instance->renderer.in_flight, VK_TRUE, UINT64_MAX));
+  vk_return_result_if_err(vkResetFences(instance->device.vk_device, 1, &instance->renderer.in_flight));
+
+  uint32_t current_image_idx;
+  VkResult vk_result = vkAcquireNextImageKHR(instance->device.vk_device, instance->swapchain.vk_swapchain, UINT64_MAX,
+                                             instance->renderer.image_available, NULL, &current_image_idx);
+  vk_return_result_if_err(vk_result);
+
+  vk_return_result_if_err(vkResetCommandBuffer(instance->renderer.command_buffer, 0));
+  return_result_if_err(m_renderer_record(instance, current_image_idx));
+
+  const VkPipelineStageFlags wait_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  const VkSubmitInfo submit_info = {
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &instance->renderer.command_buffer,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &instance->renderer.image_available,
+      .pWaitDstStageMask = &wait_flags,
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &instance->renderer.render_finished,
+  };
+
+  vk_result = vkQueueSubmit(instance->device.graphics_queue, 1, &submit_info, instance->renderer.in_flight);
+  vk_return_result_if_err(vk_result);
+
+  const VkPresentInfoKHR present_info = {
+      .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &instance->renderer.render_finished,
+      .swapchainCount = 1,
+      .pSwapchains = &instance->swapchain.vk_swapchain,
+      .pImageIndices = &current_image_idx,
+  };
+
+  vk_return_result_if_err(vkQueuePresentKHR(instance->device.present_queue, &present_info));
+
+  return result;
+}
+
+void m_renderer_destroy(struct M_Instance *instance) {
+  if (instance->renderer.image_available != NULL) {
+    vkDestroySemaphore(instance->device.vk_device, instance->renderer.image_available, NULL);
+    instance->renderer.image_available = NULL;
+  }
+  if (instance->renderer.render_finished != NULL) {
+    vkDestroySemaphore(instance->device.vk_device, instance->renderer.render_finished, NULL);
+    instance->renderer.render_finished = NULL;
+  }
+  if (instance->renderer.in_flight != NULL) {
+    vkDestroyFence(instance->device.vk_device, instance->renderer.in_flight, NULL);
+    instance->renderer.in_flight = NULL;
+  }
+  if (instance->renderer.command_pool != NULL) {
+    vkDestroyCommandPool(instance->device.vk_device, instance->renderer.command_pool, NULL);
+    instance->renderer.command_pool = NULL;
+  }
+}

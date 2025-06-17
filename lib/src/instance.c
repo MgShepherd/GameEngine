@@ -2,6 +2,7 @@
 #include "instance_private.h"
 #include "logger.h"
 #include "pipeline_management.h"
+#include "render_management.h"
 #include "result.h"
 #include "result_utils.h"
 #include "shader_management.h"
@@ -17,6 +18,8 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
 
+// TODO: Since we call clean here, remove the clean call from all inner functions as currently calling same functions
+// twice
 enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *window,
                                 const M_InstanceOptions *instance_options) {
   enum M_Result result = M_SUCCESS;
@@ -48,13 +51,27 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   result = m_pipeline_create(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
+  result = m_swap_chain_framebuffers_create(*instance);
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
+
+  result = m_renderer_create(*instance, physical_device);
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
+
   m_logger_info("Successfully initialised M_Instance");
 
   return result;
 }
 
+enum M_Result m_instance_update(M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+  return_result_if_err_clean(m_renderer_render(instance), m_instance_destroy, instance);
+  return result;
+}
+
 void m_instance_destroy(M_Instance *instance) {
+  vkDeviceWaitIdle(instance->device.vk_device);
   if (instance != NULL) {
+    m_renderer_destroy(instance);
     m_pipeline_destroy(instance);
     m_swap_chain_destroy(instance);
     vk_device_destroy(&instance->device);

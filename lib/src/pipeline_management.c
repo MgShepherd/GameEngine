@@ -220,6 +220,17 @@ enum M_Result create_pipeline_layout(struct M_Instance *instance) {
   return result;
 };
 
+void create_subpass_dependency(struct M_Instance *instance) {
+  instance->pipeline.subpass_dependency = (VkSubpassDependency){
+      .srcSubpass = VK_SUBPASS_EXTERNAL,
+      .dstSubpass = 0,
+      .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .srcAccessMask = 0,
+      .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+  };
+}
+
 enum M_Result create_render_pass(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
@@ -233,6 +244,8 @@ enum M_Result create_render_pass(struct M_Instance *instance) {
       .pAttachments = &color_attachment,
       .subpassCount = 1,
       .pSubpasses = &subpass,
+      .dependencyCount = 1,
+      .pDependencies = &instance->pipeline.subpass_dependency,
   };
 
   VkResult vk_result =
@@ -249,6 +262,7 @@ enum M_Result m_pipeline_create(struct M_Instance *instance) {
   struct M_PipelineStages stages;
   return_result_if_err(create_shader_stages(&stages, instance));
   return_result_if_err(create_pipeline_layout(instance));
+  create_subpass_dependency(instance);
   return_result_if_err(create_render_pass(instance));
 
   const VkGraphicsPipelineCreateInfo create_info = {

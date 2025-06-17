@@ -13,6 +13,7 @@ set(SOURCES
 	src/vk_swap_chain_management.c
 	src/shader_management.c
 	src/pipeline_management.c
+	src/render_management.c
 	src/window.c)
 
 find_package(Vulkan REQUIRED)
