@@ -15,6 +15,9 @@ const uint32_t NUM_SHADER_STAGES = 2;
 struct M_PipelineStages {
   VkViewport *viewport;
   VkRect2D *scissor;
+  VkVertexInputBindingDescription shader_binding_description;
+  VkVertexInputAttributeDescription *shader_attribute_descriptions;
+  uint32_t num_shader_attribute_descriptions;
   VkPipelineShaderStageCreateInfo *shader_stages;
   VkPipelineVertexInputStateCreateInfo vertex_input_state;
   VkPipelineInputAssemblyStateCreateInfo input_assembly_state;
@@ -52,11 +55,15 @@ VkPipelineShaderStageCreateInfo create_shader_stage(const VkShaderModule module,
   };
 }
 
-VkPipelineVertexInputStateCreateInfo create_vertex_input_state() {
+VkPipelineVertexInputStateCreateInfo create_vertex_input_state(struct M_PipelineStages *stages) {
+  assert(stages->shader_attribute_descriptions != NULL);
+
   return (VkPipelineVertexInputStateCreateInfo){
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .vertexBindingDescriptionCount = 0,
-      .vertexAttributeDescriptionCount = 0,
+      .vertexBindingDescriptionCount = 1,
+      .pVertexBindingDescriptions = &stages->shader_binding_description,
+      .vertexAttributeDescriptionCount = stages->num_shader_attribute_descriptions,
+      .pVertexAttributeDescriptions = stages->shader_attribute_descriptions,
   };
 }
 
@@ -132,8 +139,13 @@ void destroy_shader_stages(struct M_PipelineStages *stages, const M_Instance *in
   if (stages->shader_stages != NULL) {
     cleanup_shader_stage_create(stages->shader_stages[0].module, stages->shader_stages[1].module, stages->viewport,
                                 stages->scissor, instance);
+
+    if (stages->shader_attribute_descriptions != NULL) {
+      free(stages->shader_attribute_descriptions);
+    };
     free(stages->shader_stages);
     stages->shader_stages = NULL;
+    stages->shader_attribute_descriptions = NULL;
   }
 }
 
@@ -169,7 +181,6 @@ enum M_Result create_shader_stages(struct M_PipelineStages *stages, struct M_Ins
       .viewport = viewport,
       .scissor = scissor,
       .shader_stages = shader_stages_create_info,
-      .vertex_input_state = create_vertex_input_state(),
       .input_assembly_state = create_input_assembly_state(),
       .viewport_state = create_viewport_state(viewport, scissor),
       .rasterization_state = create_rasterization_state(),
@@ -177,6 +188,12 @@ enum M_Result create_shader_stages(struct M_PipelineStages *stages, struct M_Ins
       .color_blend_attachment_state = color_blend_attachment_state,
       .color_blend_state = create_color_blend_state(&color_blend_attachment_state),
   };
+
+  m_shader_get_input_binding(&stages->shader_binding_description);
+  result =
+      m_shader_get_input_attributes(&stages->shader_attribute_descriptions, &stages->num_shader_attribute_descriptions);
+  return_result_if_err_clean(result, destroy_shader_stages, stages, instance);
+  stages->vertex_input_state = create_vertex_input_state(stages);
 
   return result;
 }

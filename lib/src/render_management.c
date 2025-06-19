@@ -4,6 +4,7 @@
 #include "result_utils.h"
 #include "vk_device_management.h"
 #include "vk_utils.h"
+#include <assert.h>
 #include <vulkan/vulkan_core.h>
 
 enum M_Result create_command_pool(struct M_Instance *instance, const VkPhysicalDevice physical_device) {
@@ -72,7 +73,7 @@ enum M_Result m_renderer_record(struct M_Instance *instance, uint32_t image_idx)
 
   vk_return_result_if_err(vkBeginCommandBuffer(instance->renderer.command_buffer, &begin_info));
 
-  const VkClearValue clear_color = {.color = {.float32 = {1.0f, 0.0f, 0.0f, 1.0f}}};
+  const VkClearValue clear_color = {.color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}};
   const VkRenderPassBeginInfo render_begin_info = {
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
       .renderPass = instance->pipeline.render_pass,
@@ -86,10 +87,13 @@ enum M_Result m_renderer_record(struct M_Instance *instance, uint32_t image_idx)
       .pClearValues = &clear_color,
   };
 
+  VkDeviceSize offsets[] = {0};
+
   vkCmdBeginRenderPass(instance->renderer.command_buffer, &render_begin_info, VK_SUBPASS_CONTENTS_INLINE);
   vkCmdBindPipeline(instance->renderer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, instance->pipeline.vk_pipeline);
+  vkCmdBindVertexBuffers(instance->renderer.command_buffer, 0, 1, &instance->buffer.vk_buffer, offsets);
 
-  vkCmdDraw(instance->renderer.command_buffer, 3, 1, 0, 0);
+  vkCmdDraw(instance->renderer.command_buffer, instance->buffer.num_elements, 1, 0, 0);
 
   vkCmdEndRenderPass(instance->renderer.command_buffer);
 

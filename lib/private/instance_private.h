@@ -1,6 +1,7 @@
 #ifndef M_INSTANCE_PRIVATE_H
 #define M_INSTANCE_PRIVATE_H
 
+#include "buffer_management.h"
 #include "pipeline_management.h"
 #include "render_management.h"
 #include "vk_device_management.h"
@@ -15,6 +16,7 @@ struct M_Instance {
   struct M_SwapChain swapchain;
   struct M_Pipeline pipeline;
   struct M_Renderer renderer;
+  struct M_Buffer buffer;
 };
 
 #endif // !M_INSTANCE_PRIVATE_H

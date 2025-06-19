@@ -4,9 +4,12 @@
 #include "result.h"
 #include "result_utils.h"
 #include "vk_utils.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
+
+const uint32_t NUM_VERTEX_ATTRIBUTES = 2;
 
 void cleanup_load_shader(FILE *file, uint32_t *file_contents) {
   if (file != NULL) {
@@ -107,4 +110,36 @@ void m_shader_modules_destroy(VkShaderModule vert_shader, VkShaderModule frag_sh
   if (frag_shader != NULL) {
     vkDestroyShaderModule(instance->device.vk_device, frag_shader, NULL);
   }
+}
+
+void m_shader_get_input_binding(VkVertexInputBindingDescription *binding_description) {
+  *binding_description = (VkVertexInputBindingDescription){
+      .binding = 0,
+      .stride = sizeof(struct M_Vertex),
+      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+  };
+}
+
+enum M_Result m_shader_get_input_attributes(VkVertexInputAttributeDescription **attribute_descriptions,
+                                            uint32_t *num_attributes) {
+  enum M_Result result = M_SUCCESS;
+  *attribute_descriptions = malloc(NUM_VERTEX_ATTRIBUTES * sizeof(VkVertexInputAttributeDescription));
+  return_result_if_null(*attribute_descriptions, M_MEMORY_ALLOC_ERR, "Unable to allocate memory");
+
+  *num_attributes = NUM_VERTEX_ATTRIBUTES;
+  (*attribute_descriptions)[0] = (VkVertexInputAttributeDescription){
+      .binding = 0,
+      .location = 0,
+      .format = VK_FORMAT_R32G32_SFLOAT,
+      .offset = offsetof(struct M_Vertex, position),
+  };
+
+  (*attribute_descriptions)[1] = (VkVertexInputAttributeDescription){
+      .binding = 0,
+      .location = 1,
+      .format = VK_FORMAT_R32G32B32_SFLOAT,
+      .offset = offsetof(struct M_Vertex, color),
+  };
+
+  return result;
 }
