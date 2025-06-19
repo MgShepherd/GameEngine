@@ -6,10 +6,11 @@
 
 struct M_Renderer {
   VkCommandPool command_pool;
-  VkCommandBuffer command_buffer;
-  VkSemaphore image_available;
-  VkSemaphore render_finished;
-  VkFence in_flight;
+  VkCommandBuffer *command_buffers;
+  VkSemaphore *image_available_semaphores;
+  VkSemaphore *render_finished_semaphores;
+  VkFence *in_flight_fences;
+  uint32_t current_frame;
 };
 
 enum M_Result m_renderer_create(struct M_Instance *instance, const VkPhysicalDevice physical_device);
