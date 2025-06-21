@@ -10,24 +10,6 @@
 
 const uint32_t MAX_FRAMES_IN_FLIGHT = 3;
 
-enum M_Result create_command_pool(struct M_Instance *instance, const VkPhysicalDevice physical_device) {
-  enum M_Result result = M_SUCCESS;
-
-  const struct M_QueueFamilyIndices queue_families = vk_physical_device_get_queue_families(physical_device, instance);
-
-  const VkCommandPoolCreateInfo create_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-      .queueFamilyIndex = queue_families.graphics,
-  };
-
-  const VkResult vk_result =
-      vkCreateCommandPool(instance->device.vk_device, &create_info, NULL, &instance->renderer.command_pool);
-  vk_return_result_if_err(vk_result);
-
-  return result;
-}
-
 enum M_Result allocate_command_buffers(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
@@ -44,6 +26,7 @@ enum M_Result allocate_command_buffers(struct M_Instance *instance) {
   const VkResult vk_result =
       vkAllocateCommandBuffers(instance->device.vk_device, &allocate_info, instance->renderer.command_buffers);
   vk_return_result_if_err_clean(vk_result, m_renderer_destroy, instance);
+  m_logger_info("Successfully allocated command buffers");
 
   return result;
 }
@@ -125,7 +108,9 @@ enum M_Result m_renderer_record(struct M_Instance *instance, uint32_t image_idx)
 enum M_Result m_renderer_create(struct M_Instance *instance, const VkPhysicalDevice physical_device) {
   enum M_Result result = M_SUCCESS;
 
-  return_result_if_err(create_command_pool(instance, physical_device));
+  result = create_command_pool(&instance->renderer.command_pool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                               instance, physical_device);
+  return_result_if_err(result);
   return_result_if_err(allocate_command_buffers(instance));
   return_result_if_err(create_sync_objects(instance));
 

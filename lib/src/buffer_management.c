@@ -8,17 +8,6 @@
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
-VkResult create_vk_buffer(struct M_Instance *instance, uint32_t size) {
-  const VkBufferCreateInfo create_info = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-      .size = size,
-      .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-  };
-
-  return vkCreateBuffer(instance->device.vk_device, &create_info, NULL, &instance->buffer.vk_buffer);
-}
-
 uint32_t find_suitable_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
                                 VkMemoryPropertyFlags properties) {
   VkPhysicalDeviceMemoryProperties mem_properties;
@@ -32,48 +21,117 @@ uint32_t find_suitable_mem_type(VkPhysicalDevice physical_device, uint32_t type_
   return UINT32_MAX;
 }
 
-enum M_Result create_vk_buffer_memory(struct M_Instance *instance, VkPhysicalDevice physical_device) {
+enum M_Result copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size, struct M_Instance *instance,
+                          VkPhysicalDevice device) {
   enum M_Result result = M_SUCCESS;
 
-  VkMemoryRequirements mem_reqs;
-  vkGetBufferMemoryRequirements(instance->device.vk_device, instance->buffer.vk_buffer, &mem_reqs);
+  VkCommandPool command_pool;
+  result = create_command_pool(&command_pool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, instance, device);
+  return_result_if_err(result);
 
-  uint32_t idx = find_suitable_mem_type(physical_device, mem_reqs.memoryTypeBits,
-                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-  if (idx == UINT32_MAX)
-    result = m_result_process(M_VULKAN_INIT_ERR, "Unable to find suitable memory for buffer");
-
-  const VkMemoryAllocateInfo allocate_info = {
-      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-      .allocationSize = mem_reqs.size,
-      .memoryTypeIndex = idx,
+  const VkCommandBufferAllocateInfo allocate_info = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      .commandPool = command_pool,
+      .commandBufferCount = 1,
   };
 
-  vk_return_result_if_err(
-      vkAllocateMemory(instance->device.vk_device, &allocate_info, NULL, &instance->buffer.vk_memory));
+  VkCommandBuffer command_buffer;
+  VkResult vk_result = vkAllocateCommandBuffers(instance->device.vk_device, &allocate_info, &command_buffer);
+  vk_return_result_if_err_clean(vk_result, vkDestroyCommandPool, instance->device.vk_device, command_pool, NULL);
+
+  const VkCommandBufferBeginInfo begin_info = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+  };
+
+  vkBeginCommandBuffer(command_buffer, &begin_info);
+  const VkBufferCopy copy_region = {
+      .size = size,
+  };
+  vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
+  vk_result = vkEndCommandBuffer(command_buffer);
+  vk_return_result_if_err_clean(vk_result, vkDestroyCommandPool, instance->device.vk_device, command_pool, NULL);
+
+  const VkSubmitInfo submit_info = {
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &command_buffer,
+  };
+
+  vk_result = vkQueueSubmit(instance->device.graphics_queue, 1, &submit_info, NULL);
+  vk_return_result_if_err_clean(vk_result, vkDestroyCommandPool, instance->device.vk_device, command_pool, NULL);
+  vk_result = vkQueueWaitIdle(instance->device.graphics_queue);
+  vkDestroyCommandPool(instance->device.vk_device, command_pool, NULL);
+
   return result;
 }
 
-enum M_Result m_buffer_create(struct M_Instance *instance, VkPhysicalDevice physical_device,
-                              const struct M_Vertex *data, uint32_t num_elements) {
+enum M_Result create_buffer(const M_Instance *instance, const VkPhysicalDevice physical_device, VkDeviceSize size,
+                            VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer *buffer,
+                            VkDeviceMemory *memory) {
+  enum M_Result result = M_SUCCESS;
+  const VkBufferCreateInfo create_info = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+      .size = size,
+      .usage = usage,
+      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+  };
+
+  vk_return_result_if_err(vkCreateBuffer(instance->device.vk_device, &create_info, NULL, buffer));
+
+  VkMemoryRequirements mem_requirements;
+  vkGetBufferMemoryRequirements(instance->device.vk_device, *buffer, &mem_requirements);
+  const uint32_t type_idx = find_suitable_mem_type(physical_device, mem_requirements.memoryTypeBits, properties);
+  if (type_idx == UINT32_MAX) {
+    return m_result_process(M_VULKAN_INIT_ERR, "Unable to find suitable memory");
+  }
+
+  const VkMemoryAllocateInfo allocate_info = {
+      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+      .allocationSize = mem_requirements.size,
+      .memoryTypeIndex = type_idx,
+  };
+
+  vk_return_result_if_err(vkAllocateMemory(instance->device.vk_device, &allocate_info, NULL, memory));
+  vk_return_result_if_err(vkBindBufferMemory(instance->device.vk_device, *buffer, *memory, 0));
+
+  return result;
+}
+
+void vertex_buffer_create_free(const struct M_Instance *instance, VkBuffer buffer, VkDeviceMemory memory) {
+  vkDestroyBuffer(instance->device.vk_device, buffer, NULL);
+  vkFreeMemory(instance->device.vk_device, memory, NULL);
+}
+
+enum M_Result m_vertex_buffer_create(struct M_Instance *instance, VkPhysicalDevice physical_device,
+                                     const struct M_Vertex *data, uint32_t num_elements) {
   enum M_Result result = M_SUCCESS;
   const VkDeviceSize buffer_size = sizeof(struct M_Vertex) * num_elements;
 
-  vk_return_result_if_err(create_vk_buffer(instance, buffer_size));
-  return_result_if_err(create_vk_buffer_memory(instance, physical_device));
+  VkBuffer staging_buffer;
+  VkDeviceMemory staging_buffer_memory;
 
-  VkResult vk_result =
-      vkBindBufferMemory(instance->device.vk_device, instance->buffer.vk_buffer, instance->buffer.vk_memory, 0);
-  vk_return_result_if_err(vk_result);
+  result = create_buffer(instance, physical_device, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer,
+                         &staging_buffer_memory);
 
   void *mapped_memory;
-  vk_result = vkMapMemory(instance->device.vk_device, instance->buffer.vk_memory, 0, buffer_size, 0, &mapped_memory);
-  vk_return_result_if_err(vk_result);
+  const VkResult vk_result =
+      vkMapMemory(instance->device.vk_device, staging_buffer_memory, 0, buffer_size, 0, &mapped_memory);
+  return_result_if_err_clean(result, vertex_buffer_create_free, instance, staging_buffer, staging_buffer_memory);
   memcpy(mapped_memory, data, buffer_size);
-  vkUnmapMemory(instance->device.vk_device, instance->buffer.vk_memory);
+  vkUnmapMemory(instance->device.vk_device, staging_buffer_memory);
+
+  result = create_buffer(instance, physical_device, buffer_size,
+                         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &instance->buffer.vk_buffer, &instance->buffer.vk_memory);
+  return_result_if_err_clean(result, vertex_buffer_create_free, instance, staging_buffer, staging_buffer_memory);
+
+  result = copy_buffer(staging_buffer, instance->buffer.vk_buffer, buffer_size, instance, physical_device);
 
   instance->buffer.num_elements = num_elements;
+  vertex_buffer_create_free(instance, staging_buffer, staging_buffer_memory);
 
   return result;
 }

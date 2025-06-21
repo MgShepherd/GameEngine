@@ -64,7 +64,7 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
       {.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}},
   };
 
-  result = m_buffer_create(*instance, physical_device, vertices, NUM_VERTICES);
+  result = m_vertex_buffer_create(*instance, physical_device, vertices, NUM_VERTICES);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   m_logger_info("Successfully initialised M_Instance");

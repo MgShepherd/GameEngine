@@ -11,8 +11,8 @@ struct M_Buffer {
   uint32_t num_elements;
 };
 
-enum M_Result m_buffer_create(struct M_Instance *instance, VkPhysicalDevice physical_device,
-                              const struct M_Vertex *data, uint32_t num_elements);
+enum M_Result m_vertex_buffer_create(struct M_Instance *instance, VkPhysicalDevice physical_device,
+                                     const struct M_Vertex *data, uint32_t num_elements);
 void m_buffer_destroy(M_Instance *instance);
 
 #endif // !BUFFER_MANAGEMENT_H

@@ -1,8 +1,12 @@
 #ifndef VK_UTILS_H
 #define VK_UTILS_H
 
+#include "instance.h"
 #include <vulkan/vulkan_core.h>
 
 enum M_Result process_vulkan_result(VkResult result);
+
+enum M_Result create_command_pool(VkCommandPool *command_pool, VkCommandPoolCreateFlagBits flags,
+                                  struct M_Instance *instance, const VkPhysicalDevice physical_device);
 
 #endif
