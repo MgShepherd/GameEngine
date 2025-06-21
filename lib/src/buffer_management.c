@@ -25,7 +25,7 @@ uint32_t find_suitable_mem_type(VkPhysicalDevice physical_device, uint32_t type_
   vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_properties);
 
   for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
-    if (type_filter && (1 << i) && mem_properties.memoryTypes[i].propertyFlags & properties) {
+    if ((type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
       return i;
     }
   }

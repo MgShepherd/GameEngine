@@ -15,6 +15,8 @@ const uint32_t NUM_SHADER_STAGES = 2;
 struct M_PipelineStages {
   VkViewport *viewport;
   VkRect2D *scissor;
+  VkShaderModule vertex_shader_module;
+  VkShaderModule fragment_shader_module;
   VkVertexInputBindingDescription shader_binding_description;
   VkVertexInputAttributeDescription *shader_attribute_descriptions;
   uint32_t num_shader_attribute_descriptions;
@@ -154,28 +156,27 @@ enum M_Result create_shader_stages(struct M_PipelineStages *stages, struct M_Ins
   VkViewport *viewport = NULL;
   VkRect2D *scissor = NULL;
 
-  VkShaderModule vert_shader_module, frag_shader_module;
-  m_shader_modules_create(&vert_shader_module, &frag_shader_module, instance);
+  m_shader_modules_create(&stages->vertex_shader_module, &stages->fragment_shader_module, instance);
   return_result_if_err(result);
 
   viewport = malloc(sizeof(VkViewport));
   return_result_if_null_clean(viewport, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", cleanup_shader_stage_create,
-                              vert_shader_module, frag_shader_module, viewport, scissor, instance);
+                              stages->vertex_shader_module, stages->fragment_shader_module, viewport, scissor,
+                              instance);
   scissor = malloc(sizeof(VkRect2D));
   return_result_if_null_clean(viewport, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", cleanup_shader_stage_create,
-                              vert_shader_module, frag_shader_module, viewport, scissor, instance);
+                              stages->vertex_shader_module, stages->fragment_shader_module, viewport, scissor,
+                              instance);
   *viewport = create_viewport(&instance->swapchain);
   *scissor = create_scissor(&instance->swapchain);
-
-  const VkPipelineColorBlendAttachmentState color_blend_attachment_state = create_color_blend_attachment_state();
 
   VkPipelineShaderStageCreateInfo *shader_stages_create_info =
       malloc(NUM_SHADER_STAGES * sizeof(VkPipelineShaderStageCreateInfo));
   return_result_if_null_clean(shader_stages_create_info, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
-                              cleanup_shader_stage_create, vert_shader_module, frag_shader_module, viewport, scissor,
-                              instance);
-  shader_stages_create_info[0] = create_shader_stage(vert_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
-  shader_stages_create_info[1] = create_shader_stage(frag_shader_module, VK_SHADER_STAGE_FRAGMENT_BIT);
+                              cleanup_shader_stage_create, stages->vertex_shader_module, stages->fragment_shader_module,
+                              viewport, scissor, instance);
+  shader_stages_create_info[0] = create_shader_stage(stages->vertex_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
+  shader_stages_create_info[1] = create_shader_stage(stages->fragment_shader_module, VK_SHADER_STAGE_FRAGMENT_BIT);
 
   *stages = (struct M_PipelineStages){
       .viewport = viewport,
@@ -185,9 +186,10 @@ enum M_Result create_shader_stages(struct M_PipelineStages *stages, struct M_Ins
       .viewport_state = create_viewport_state(viewport, scissor),
       .rasterization_state = create_rasterization_state(),
       .multisample_state = create_multisample_state(),
-      .color_blend_attachment_state = color_blend_attachment_state,
-      .color_blend_state = create_color_blend_state(&color_blend_attachment_state),
   };
+
+  stages->color_blend_attachment_state = create_color_blend_attachment_state();
+  stages->color_blend_state = create_color_blend_state(&stages->color_blend_attachment_state),
 
   m_shader_get_input_binding(&stages->shader_binding_description);
   result =
@@ -284,7 +286,7 @@ enum M_Result m_pipeline_create(struct M_Instance *instance) {
 
   const VkGraphicsPipelineCreateInfo create_info = {
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .stageCount = 2,
+      .stageCount = NUM_SHADER_STAGES,
       .pStages = stages.shader_stages,
       .pVertexInputState = &stages.vertex_input_state,
       .pInputAssemblyState = &stages.input_assembly_state,

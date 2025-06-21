@@ -28,7 +28,7 @@ bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
   for (uint32_t i = 0; i < NUM_REQUIRED_EXTENSIONS; i++) {
     found = false;
     for (uint32_t j = 0; j < num_available_extensions; j++) {
-      if (strcmp(REQUIRED_EXTENSIONS[i], available_extensions[j].extensionName)) {
+      if (strcmp(REQUIRED_EXTENSIONS[i], available_extensions[j].extensionName) == 0) {
         found = true;
         break;
       }
@@ -60,7 +60,7 @@ void add_extension_if_found(const char *extension_name, VkExtensionProperties *a
                             uint32_t num_available_extensions, const char **found_extensions,
                             uint32_t *num_found_extensions) {
   for (uint32_t j = 0; j < num_available_extensions; j++) {
-    if (strcmp(extension_name, available_extensions[j].extensionName)) {
+    if (strcmp(extension_name, available_extensions[j].extensionName) == 0) {
       found_extensions[(*num_found_extensions)++] = extension_name;
       return;
     }
@@ -118,7 +118,7 @@ struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevi
   VkBool32 has_present_support = false;
 
   for (uint32_t i = 0; i < queue_family_count; i++) {
-    if (indices.graphics == UINT32_MAX && queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+    if (indices.graphics == UINT32_MAX && (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
       indices.graphics = i;
       remaining_queues_to_find--;
     }
