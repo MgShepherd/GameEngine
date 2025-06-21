@@ -15,8 +15,6 @@ const uint32_t NUM_SHADER_STAGES = 2;
 struct M_PipelineStages {
   VkViewport *viewport;
   VkRect2D *scissor;
-  VkShaderModule vertex_shader_module;
-  VkShaderModule fragment_shader_module;
   VkVertexInputBindingDescription shader_binding_description;
   VkVertexInputAttributeDescription *shader_attribute_descriptions;
   uint32_t num_shader_attribute_descriptions;
@@ -126,8 +124,8 @@ create_color_blend_state(const VkPipelineColorBlendAttachmentState *color_blend_
   };
 }
 
-void cleanup_shader_stage_create(VkShaderModule vert_shader, VkShaderModule frag_shader, VkViewport *viewport,
-                                 VkRect2D *scissor, const struct M_Instance *instance) {
+void cleanup_stages_create(VkShaderModule vert_shader, VkShaderModule frag_shader, VkViewport *viewport,
+                           VkRect2D *scissor, const struct M_Instance *instance) {
   m_shader_modules_destroy(vert_shader, frag_shader, instance);
   if (viewport != NULL) {
     free(viewport);
@@ -137,10 +135,10 @@ void cleanup_shader_stage_create(VkShaderModule vert_shader, VkShaderModule frag
   }
 }
 
-void destroy_shader_stages(struct M_PipelineStages *stages, const M_Instance *instance) {
+void destroy_stages(struct M_PipelineStages *stages, const M_Instance *instance) {
   if (stages->shader_stages != NULL) {
-    cleanup_shader_stage_create(stages->shader_stages[0].module, stages->shader_stages[1].module, stages->viewport,
-                                stages->scissor, instance);
+    cleanup_stages_create(stages->shader_stages[0].module, stages->shader_stages[1].module, stages->viewport,
+                          stages->scissor, instance);
 
     if (stages->shader_attribute_descriptions != NULL) {
       free(stages->shader_attribute_descriptions);
@@ -151,32 +149,31 @@ void destroy_shader_stages(struct M_PipelineStages *stages, const M_Instance *in
   }
 }
 
-enum M_Result create_shader_stages(struct M_PipelineStages *stages, struct M_Instance *instance) {
+enum M_Result create_stages(struct M_PipelineStages *stages, struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
   VkViewport *viewport = NULL;
   VkRect2D *scissor = NULL;
 
-  m_shader_modules_create(&stages->vertex_shader_module, &stages->fragment_shader_module, instance);
+  VkShaderModule vertex_shader_module, fragment_shader_module;
+  m_shader_modules_create(&vertex_shader_module, &fragment_shader_module, instance);
   return_result_if_err(result);
 
   viewport = malloc(sizeof(VkViewport));
-  return_result_if_null_clean(viewport, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", cleanup_shader_stage_create,
-                              stages->vertex_shader_module, stages->fragment_shader_module, viewport, scissor,
-                              instance);
+  return_result_if_null_clean(viewport, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", cleanup_stages_create,
+                              vertex_shader_module, fragment_shader_module, viewport, scissor, instance);
   scissor = malloc(sizeof(VkRect2D));
-  return_result_if_null_clean(viewport, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", cleanup_shader_stage_create,
-                              stages->vertex_shader_module, stages->fragment_shader_module, viewport, scissor,
-                              instance);
+  return_result_if_null_clean(viewport, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", cleanup_stages_create,
+                              vertex_shader_module, fragment_shader_module, viewport, scissor, instance);
   *viewport = create_viewport(&instance->swapchain);
   *scissor = create_scissor(&instance->swapchain);
 
   VkPipelineShaderStageCreateInfo *shader_stages_create_info =
       malloc(NUM_SHADER_STAGES * sizeof(VkPipelineShaderStageCreateInfo));
   return_result_if_null_clean(shader_stages_create_info, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
-                              cleanup_shader_stage_create, stages->vertex_shader_module, stages->fragment_shader_module,
-                              viewport, scissor, instance);
-  shader_stages_create_info[0] = create_shader_stage(stages->vertex_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
-  shader_stages_create_info[1] = create_shader_stage(stages->fragment_shader_module, VK_SHADER_STAGE_FRAGMENT_BIT);
+                              cleanup_stages_create, vertex_shader_module, fragment_shader_module, viewport, scissor,
+                              instance);
+  shader_stages_create_info[0] = create_shader_stage(vertex_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
+  shader_stages_create_info[1] = create_shader_stage(fragment_shader_module, VK_SHADER_STAGE_FRAGMENT_BIT);
 
   *stages = (struct M_PipelineStages){
       .viewport = viewport,
@@ -194,7 +191,7 @@ enum M_Result create_shader_stages(struct M_PipelineStages *stages, struct M_Ins
   m_shader_get_input_binding(&stages->shader_binding_description);
   result =
       m_shader_get_input_attributes(&stages->shader_attribute_descriptions, &stages->num_shader_attribute_descriptions);
-  return_result_if_err_clean(result, destroy_shader_stages, stages, instance);
+  return_result_if_err_clean(result, destroy_stages, stages, instance);
   stages->vertex_input_state = create_vertex_input_state(stages);
 
   return result;
@@ -279,7 +276,7 @@ enum M_Result m_pipeline_create(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
   struct M_PipelineStages stages;
-  return_result_if_err(create_shader_stages(&stages, instance));
+  return_result_if_err(create_stages(&stages, instance));
   return_result_if_err(create_pipeline_layout(instance));
   create_subpass_dependency(instance);
   return_result_if_err(create_render_pass(instance));
@@ -302,7 +299,7 @@ enum M_Result m_pipeline_create(struct M_Instance *instance) {
   VkResult vk_result = vkCreateGraphicsPipelines(instance->device.vk_device, NULL, 1, &create_info, NULL,
                                                  &instance->pipeline.vk_pipeline);
 
-  destroy_shader_stages(&stages, instance);
+  destroy_stages(&stages, instance);
   vk_return_result_if_err(vk_result);
 
   return result;
