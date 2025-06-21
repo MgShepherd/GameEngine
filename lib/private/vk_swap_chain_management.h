@@ -27,7 +27,7 @@ enum M_Result m_swap_chain_get_device_support(struct M_SwapChainSupport *swap_su
                                               const struct M_Instance *instance);
 void m_swap_chain_support_destroy(struct M_SwapChainSupport *swap_support);
 
-enum M_Result m_swap_chain_create(M_Instance *instance, VkPhysicalDevice physical_device, const M_Window *window);
+enum M_Result m_swap_chain_create(M_Instance *instance, const M_Window *window);
 void m_swap_chain_destroy(M_Instance *instance);
 
 enum M_Result m_swap_chain_framebuffers_create(M_Instance *instance);

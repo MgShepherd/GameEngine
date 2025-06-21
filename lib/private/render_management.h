@@ -13,7 +13,7 @@ struct M_Renderer {
   uint32_t current_frame;
 };
 
-enum M_Result m_renderer_create(struct M_Instance *instance, const VkPhysicalDevice physical_device);
+enum M_Result m_renderer_create(struct M_Instance *instance);
 void m_renderer_destroy(struct M_Instance *instance);
 
 enum M_Result m_renderer_render(struct M_Instance *instance);

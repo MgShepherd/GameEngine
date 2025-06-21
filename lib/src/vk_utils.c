@@ -16,10 +16,11 @@ enum M_Result process_vulkan_result(VkResult result) {
 }
 
 enum M_Result create_command_pool(VkCommandPool *command_pool, VkCommandPoolCreateFlagBits flags,
-                                  struct M_Instance *instance, const VkPhysicalDevice physical_device) {
+                                  struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
-  const struct M_QueueFamilyIndices queue_families = vk_physical_device_get_queue_families(physical_device, instance);
+  const struct M_QueueFamilyIndices queue_families =
+      vk_physical_device_get_queue_families(instance->device.physical_device, instance);
 
   const VkCommandPoolCreateInfo create_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,

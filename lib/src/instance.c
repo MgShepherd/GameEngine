@@ -39,14 +39,13 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   result = m_window_surface_create(window, *instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
-  VkPhysicalDevice physical_device;
-  result = vk_physical_device_find(&physical_device, *instance);
+  result = vk_physical_device_find(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
-  result = vk_device_create(*instance, physical_device);
+  result = vk_device_create(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
-  result = m_swap_chain_create(*instance, physical_device, window);
+  result = m_swap_chain_create(*instance, window);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   result = m_pipeline_create(*instance);
@@ -55,7 +54,7 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   result = m_swap_chain_framebuffers_create(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
-  result = m_renderer_create(*instance, physical_device);
+  result = m_renderer_create(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   struct M_Vertex vertices[] = {
@@ -64,7 +63,7 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
       {.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}},
   };
 
-  result = m_vertex_buffer_create(*instance, physical_device, vertices, NUM_VERTICES);
+  result = m_vertex_buffer_create(*instance, vertices, NUM_VERTICES);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   m_logger_info("Successfully initialised M_Instance");

@@ -21,12 +21,11 @@ uint32_t find_suitable_mem_type(VkPhysicalDevice physical_device, uint32_t type_
   return UINT32_MAX;
 }
 
-enum M_Result copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size, struct M_Instance *instance,
-                          VkPhysicalDevice device) {
+enum M_Result copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size, struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
   VkCommandPool command_pool;
-  result = create_command_pool(&command_pool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, instance, device);
+  result = create_command_pool(&command_pool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, instance);
   return_result_if_err(result);
 
   const VkCommandBufferAllocateInfo allocate_info = {
@@ -67,9 +66,8 @@ enum M_Result copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize
   return result;
 }
 
-enum M_Result create_buffer(const M_Instance *instance, const VkPhysicalDevice physical_device, VkDeviceSize size,
-                            VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer *buffer,
-                            VkDeviceMemory *memory) {
+enum M_Result create_buffer(const M_Instance *instance, VkDeviceSize size, VkBufferUsageFlags usage,
+                            VkMemoryPropertyFlags properties, VkBuffer *buffer, VkDeviceMemory *memory) {
   enum M_Result result = M_SUCCESS;
   const VkBufferCreateInfo create_info = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -82,7 +80,8 @@ enum M_Result create_buffer(const M_Instance *instance, const VkPhysicalDevice p
 
   VkMemoryRequirements mem_requirements;
   vkGetBufferMemoryRequirements(instance->device.vk_device, *buffer, &mem_requirements);
-  const uint32_t type_idx = find_suitable_mem_type(physical_device, mem_requirements.memoryTypeBits, properties);
+  const uint32_t type_idx =
+      find_suitable_mem_type(instance->device.physical_device, mem_requirements.memoryTypeBits, properties);
   if (type_idx == UINT32_MAX) {
     return m_result_process(M_VULKAN_INIT_ERR, "Unable to find suitable memory");
   }
@@ -104,15 +103,14 @@ void vertex_buffer_create_free(const struct M_Instance *instance, VkBuffer buffe
   vkFreeMemory(instance->device.vk_device, memory, NULL);
 }
 
-enum M_Result m_vertex_buffer_create(struct M_Instance *instance, VkPhysicalDevice physical_device,
-                                     const struct M_Vertex *data, uint32_t num_elements) {
+enum M_Result m_vertex_buffer_create(struct M_Instance *instance, const struct M_Vertex *data, uint32_t num_elements) {
   enum M_Result result = M_SUCCESS;
   const VkDeviceSize buffer_size = sizeof(struct M_Vertex) * num_elements;
 
   VkBuffer staging_buffer;
   VkDeviceMemory staging_buffer_memory;
 
-  result = create_buffer(instance, physical_device, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+  result = create_buffer(instance, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer,
                          &staging_buffer_memory);
 
@@ -123,12 +121,11 @@ enum M_Result m_vertex_buffer_create(struct M_Instance *instance, VkPhysicalDevi
   memcpy(mapped_memory, data, buffer_size);
   vkUnmapMemory(instance->device.vk_device, staging_buffer_memory);
 
-  result = create_buffer(instance, physical_device, buffer_size,
-                         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+  result = create_buffer(instance, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &instance->buffer.vk_buffer, &instance->buffer.vk_memory);
   return_result_if_err_clean(result, vertex_buffer_create_free, instance, staging_buffer, staging_buffer_memory);
 
-  result = copy_buffer(staging_buffer, instance->buffer.vk_buffer, buffer_size, instance, physical_device);
+  result = copy_buffer(staging_buffer, instance->buffer.vk_buffer, buffer_size, instance);
 
   instance->buffer.num_elements = num_elements;
   vertex_buffer_create_free(instance, staging_buffer, staging_buffer_memory);

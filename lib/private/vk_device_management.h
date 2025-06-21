@@ -11,6 +11,7 @@
 
 struct M_Device {
   VkDevice vk_device;
+  VkPhysicalDevice physical_device;
   VkQueue graphics_queue;
   VkQueue present_queue;
 };
@@ -23,8 +24,8 @@ struct M_QueueFamilyIndices {
 struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevice device,
                                                                   const struct M_Instance *instance);
 
-enum M_Result vk_physical_device_find(VkPhysicalDevice *physical_device, const M_Instance *instance);
-enum M_Result vk_device_create(M_Instance *instance, VkPhysicalDevice physical_device);
+enum M_Result vk_physical_device_find(M_Instance *instance);
+enum M_Result vk_device_create(M_Instance *instance);
 void vk_device_destroy(struct M_Device *device);
 
 #endif // !VK_DEVICE_MANAGEMENT_H

@@ -7,6 +7,6 @@
 enum M_Result process_vulkan_result(VkResult result);
 
 enum M_Result create_command_pool(VkCommandPool *command_pool, VkCommandPoolCreateFlagBits flags,
-                                  struct M_Instance *instance, const VkPhysicalDevice physical_device);
+                                  struct M_Instance *instance);
 
 #endif

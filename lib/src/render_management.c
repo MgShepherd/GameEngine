@@ -105,11 +105,11 @@ enum M_Result m_renderer_record(struct M_Instance *instance, uint32_t image_idx)
   return result;
 }
 
-enum M_Result m_renderer_create(struct M_Instance *instance, const VkPhysicalDevice physical_device) {
+enum M_Result m_renderer_create(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
-  result = create_command_pool(&instance->renderer.command_pool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-                               instance, physical_device);
+  result =
+      create_command_pool(&instance->renderer.command_pool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, instance);
   return_result_if_err(result);
   return_result_if_err(allocate_command_buffers(instance));
   return_result_if_err(create_sync_objects(instance));

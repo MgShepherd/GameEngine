@@ -1,5 +1,6 @@
 #include "vk_device_management.h"
 #include "instance_private.h"
+#include "logger.h"
 #include "result.h"
 #include "result_utils.h"
 #include "vk_swap_chain_management.h"
@@ -137,9 +138,9 @@ struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevi
   return indices;
 }
 
-enum M_Result vk_physical_device_find(VkPhysicalDevice *physical_device, const struct M_Instance *instance) {
+enum M_Result vk_physical_device_find(struct M_Instance *instance) {
   assert(instance->vk_instance != NULL && instance->vk_surface != NULL);
-  *physical_device = NULL;
+  instance->device.physical_device = NULL;
 
   uint32_t device_count = 0;
   vk_return_result_if_err(vkEnumeratePhysicalDevices(instance->vk_instance, &device_count, NULL));
@@ -147,23 +148,27 @@ enum M_Result vk_physical_device_find(VkPhysicalDevice *physical_device, const s
   vk_return_result_if_err(vkEnumeratePhysicalDevices(instance->vk_instance, &device_count, available_devices));
 
   for (uint32_t i = 0; i < device_count; i++) {
+    m_logger_info("Looking at device index %d", i);
     if (vk_physical_device_is_suitable(available_devices[i], instance)) {
-      *physical_device = available_devices[i];
+      m_logger_info("Found device");
+      instance->device.physical_device = available_devices[i];
       break;
     }
   }
 
   enum M_Result result = M_SUCCESS;
-  return_result_if_null(*physical_device, M_VULKAN_INIT_ERR, "Unable to find a Graphics Device with required features");
+  return_result_if_null(instance->device.physical_device, M_VULKAN_INIT_ERR,
+                        "Unable to find a Graphics Device with required features");
 
   return result;
 }
 
-enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice physical_device) {
-  assert(physical_device != NULL && instance->vk_instance != NULL && instance->vk_surface != NULL);
+enum M_Result vk_device_create(struct M_Instance *instance) {
+  assert(instance->device.physical_device != NULL && instance->vk_instance != NULL && instance->vk_surface != NULL);
   enum M_Result result = M_SUCCESS;
 
-  struct M_QueueFamilyIndices queue_families = vk_physical_device_get_queue_families(physical_device, instance);
+  struct M_QueueFamilyIndices queue_families =
+      vk_physical_device_get_queue_families(instance->device.physical_device, instance);
   float queue_priority = 1.0f;
 
   VkDeviceQueueCreateInfo device_queue_create_infos[NUM_REQUIRED_QUEUES];
@@ -174,7 +179,7 @@ enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice phy
   VkPhysicalDeviceFeatures device_features = {};
 
   uint32_t num_device_extensions = 0;
-  const char **extensions = vk_device_get_extensions(physical_device, &num_device_extensions);
+  const char **extensions = vk_device_get_extensions(instance->device.physical_device, &num_device_extensions);
   return_result_if_null(extensions, M_VULKAN_INIT_ERR, "Unable to load required device extensions");
 
   VkDeviceCreateInfo device_create_info = {
@@ -186,8 +191,8 @@ enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice phy
       .ppEnabledExtensionNames = extensions,
   };
 
-  result =
-      process_vulkan_result(vkCreateDevice(physical_device, &device_create_info, NULL, &instance->device.vk_device));
+  result = process_vulkan_result(
+      vkCreateDevice(instance->device.physical_device, &device_create_info, NULL, &instance->device.vk_device));
 
   vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.graphics_queue);
   vkGetDeviceQueue(instance->device.vk_device, queue_families.present, 0, &instance->device.present_queue);

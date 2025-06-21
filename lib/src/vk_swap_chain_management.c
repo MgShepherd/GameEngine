@@ -149,13 +149,12 @@ void m_swap_chain_support_destroy(struct M_SwapChainSupport *swap_support) {
   }
 }
 
-enum M_Result m_swap_chain_create(struct M_Instance *instance, VkPhysicalDevice physical_device,
-                                  const M_Window *window) {
+enum M_Result m_swap_chain_create(struct M_Instance *instance, const M_Window *window) {
   assert(instance != NULL && instance->vk_surface != NULL && instance->vk_instance != NULL && window != NULL);
   enum M_Result result = M_SUCCESS;
 
   struct M_SwapChainSupport swap_support;
-  return_result_if_err(m_swap_chain_get_device_support(&swap_support, physical_device, instance));
+  return_result_if_err(m_swap_chain_get_device_support(&swap_support, instance->device.physical_device, instance));
 
   const uint32_t format_idx = choose_surface_format_idx(&swap_support);
   const VkPresentModeKHR present_mode = choose_present_mode(&swap_support);
@@ -182,7 +181,8 @@ enum M_Result m_swap_chain_create(struct M_Instance *instance, VkPhysicalDevice 
       .clipped = VK_TRUE,
   };
 
-  const struct M_QueueFamilyIndices queue_indices = vk_physical_device_get_queue_families(physical_device, instance);
+  const struct M_QueueFamilyIndices queue_indices =
+      vk_physical_device_get_queue_families(instance->device.physical_device, instance);
   assert(queue_indices.present != UINT32_MAX && queue_indices.graphics != UINT32_MAX);
 
   uint32_t indices[] = {queue_indices.present, queue_indices.graphics};
