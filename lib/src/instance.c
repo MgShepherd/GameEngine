@@ -21,8 +21,6 @@
 
 const uint32_t NUM_VERTICES = 3;
 
-// TODO: Since we call clean here, remove the clean call from all inner functions as currently calling same functions
-// twice
 enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *window,
                                 const M_InstanceOptions *instance_options) {
   enum M_Result result = M_SUCCESS;

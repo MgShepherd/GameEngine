@@ -59,13 +59,12 @@ enum M_Result get_swapchain_images(struct M_Instance *instance) {
 
   VkResult vk_result = vkGetSwapchainImagesKHR(instance->device.vk_device, instance->swapchain.vk_swapchain,
                                                &instance->swapchain.num_images, NULL);
-  vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+  vk_return_result_if_err(vk_result);
   instance->swapchain.images = malloc(instance->swapchain.num_images * sizeof(VkImage));
-  return_result_if_null_clean(instance->swapchain.images, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
-                              m_swap_chain_destroy, instance);
+  return_result_if_null(instance->swapchain.images, M_MEMORY_ALLOC_ERR, "Unable to allocate memory");
   vk_result = vkGetSwapchainImagesKHR(instance->device.vk_device, instance->swapchain.vk_swapchain,
                                       &instance->swapchain.num_images, instance->swapchain.images);
-  vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+  vk_return_result_if_err(vk_result);
 
   return result;
 }
@@ -74,8 +73,7 @@ enum M_Result get_swapchain_image_views(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
   instance->swapchain.image_views = malloc(instance->swapchain.num_images * sizeof(VkImageView));
-  return_result_if_null_clean(instance->swapchain.images, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
-                              m_swap_chain_destroy, instance);
+  return_result_if_null(instance->swapchain.images, M_MEMORY_ALLOC_ERR, "Unable to allocate memory");
 
   for (uint32_t i = 0; i < instance->swapchain.num_images; i++) {
     VkImageViewCreateInfo create_info = {
@@ -102,7 +100,7 @@ enum M_Result get_swapchain_image_views(struct M_Instance *instance) {
 
     VkResult vk_result =
         vkCreateImageView(instance->device.vk_device, &create_info, NULL, &instance->swapchain.image_views[i]);
-    vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+    vk_return_result_if_err(vk_result);
   }
 
   return result;
@@ -230,7 +228,7 @@ enum M_Result m_swap_chain_framebuffers_create(M_Instance *instance) {
 
     vk_result =
         vkCreateFramebuffer(instance->device.vk_device, &create_info, NULL, &instance->swapchain.framebuffers[i]);
-    vk_return_result_if_err_clean(vk_result, m_swap_chain_destroy, instance);
+    vk_return_result_if_err(vk_result);
   }
 
   return result;

@@ -190,7 +190,7 @@ enum M_Result vk_device_create(struct M_Instance *instance, VkPhysicalDevice phy
       process_vulkan_result(vkCreateDevice(physical_device, &device_create_info, NULL, &instance->device.vk_device));
 
   vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.graphics_queue);
-  vkGetDeviceQueue(instance->device.vk_device, queue_families.graphics, 0, &instance->device.present_queue);
+  vkGetDeviceQueue(instance->device.vk_device, queue_families.present, 0, &instance->device.present_queue);
 
   if (extensions != NULL) {
     free(extensions);

@@ -32,8 +32,7 @@ enum M_Result allocate_command_buffers(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
   instance->renderer.command_buffers = malloc(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT);
-  return_result_if_null_clean(instance->renderer.command_buffers, M_MEMORY_ALLOC_ERR, "Unable to allocate memory",
-                              m_renderer_destroy, instance);
+  return_result_if_null(instance->renderer.command_buffers, M_MEMORY_ALLOC_ERR, "Unable to allocate memory");
 
   const VkCommandBufferAllocateInfo allocate_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -70,13 +69,13 @@ enum M_Result create_sync_objects(struct M_Instance *instance) {
   for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vk_result = vkCreateSemaphore(instance->device.vk_device, &semaphore_create_info, NULL,
                                   &instance->renderer.image_available_semaphores[i]);
-    vk_return_result_if_err_clean(vk_result, m_renderer_destroy, instance);
+    vk_return_result_if_err(vk_result);
     vk_result = vkCreateSemaphore(instance->device.vk_device, &semaphore_create_info, NULL,
                                   &instance->renderer.render_finished_semaphores[i]);
-    vk_return_result_if_err_clean(vk_result, m_renderer_destroy, instance);
+    vk_return_result_if_err(vk_result);
     vk_result =
         vkCreateFence(instance->device.vk_device, &fence_create_info, NULL, &instance->renderer.in_flight_fences[i]);
-    vk_return_result_if_err_clean(vk_result, m_renderer_destroy, instance);
+    vk_return_result_if_err(vk_result);
   }
 
   return result;

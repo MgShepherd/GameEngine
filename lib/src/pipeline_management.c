@@ -303,7 +303,7 @@ enum M_Result m_pipeline_create(struct M_Instance *instance) {
                                                  &instance->pipeline.vk_pipeline);
 
   destroy_shader_stages(&stages, instance);
-  vk_return_result_if_err_clean(vk_result, m_pipeline_destroy, instance);
+  vk_return_result_if_err(vk_result);
 
   return result;
 }
