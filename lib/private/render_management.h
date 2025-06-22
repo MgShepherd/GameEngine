@@ -2,6 +2,7 @@
 #define RENDER_MANAGEMENT_H
 
 #include "instance.h"
+#include "sprite.h"
 #include <vulkan/vulkan_core.h>
 
 struct M_Renderer {
@@ -16,6 +17,6 @@ struct M_Renderer {
 enum M_Result m_renderer_create(struct M_Instance *instance);
 void m_renderer_destroy(struct M_Instance *instance);
 
-enum M_Result m_renderer_render(struct M_Instance *instance);
+enum M_Result m_renderer_render(struct M_Instance *instance, const struct M_Sprite *sprite);
 
 #endif // !RENDER_MANAGEMENT_H

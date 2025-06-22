@@ -21,7 +21,8 @@ uint32_t find_suitable_mem_type(VkPhysicalDevice physical_device, uint32_t type_
   return UINT32_MAX;
 }
 
-enum M_Result copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size, struct M_Instance *instance) {
+enum M_Result copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size,
+                          const struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
   VkCommandPool command_pool;
@@ -103,7 +104,7 @@ void buffer_create_free(const struct M_Instance *instance, VkBuffer buffer, VkDe
   vkFreeMemory(instance->device.vk_device, memory, NULL);
 }
 
-enum M_Result m_buffer_create(struct M_Buffer *buffer, struct M_Instance *instance, const void *data,
+enum M_Result m_buffer_create(struct M_Buffer *buffer, const struct M_Instance *instance, const void *data,
                               VkDeviceSize buffer_size, VkBufferUsageFlags usage) {
   enum M_Result result = M_SUCCESS;
 
@@ -132,7 +133,7 @@ enum M_Result m_buffer_create(struct M_Buffer *buffer, struct M_Instance *instan
   return result;
 }
 
-void m_buffer_destroy(struct M_Buffer *buffer, struct M_Instance *instance) {
+void m_buffer_destroy(struct M_Buffer *buffer, const struct M_Instance *instance) {
   if (buffer->vk_buffer != NULL) {
     vkDestroyBuffer(instance->device.vk_device, buffer->vk_buffer, NULL);
   }

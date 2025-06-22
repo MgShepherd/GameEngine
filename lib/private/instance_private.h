@@ -17,7 +17,6 @@ struct M_Instance {
   struct M_SwapChain swapchain;
   struct M_Pipeline pipeline;
   struct M_Renderer renderer;
-  struct M_RenderObject object;
 };
 
 #endif // !M_INSTANCE_PRIVATE_H

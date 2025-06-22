@@ -10,12 +10,13 @@ typedef struct {
 
 typedef struct M_Instance M_Instance;
 
+#include "sprite.h"
 #include "window.h"
 
 enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *window,
                                 const M_InstanceOptions *instance_options);
 void m_instance_destroy(M_Instance *instance);
 
-enum M_Result m_instance_update(M_Instance *instance);
+enum M_Result m_instance_update(M_Instance *instance, const M_Sprite *sprite);
 
 #endif // !INSTANCE_H

@@ -1,5 +1,6 @@
 #include "instance.h"
 #include "result.h"
+#include "sprite.h"
 #include "window.h"
 
 #include <stdio.h>
@@ -7,6 +8,7 @@
 int main() {
   M_Window *window = NULL;
   M_Instance *instance = NULL;
+  M_Sprite *sprite = NULL;
   const char *app_name = "Game Engine";
 
   enum M_Result result = m_window_create(&window, app_name, 640, 480);
@@ -23,8 +25,13 @@ int main() {
     goto cleanup;
   }
 
+  result = m_sprite_create(&sprite, instance);
+  if (result != M_SUCCESS) {
+    goto cleanup;
+  }
+
   while (m_window_is_open(window)) {
-    result = m_instance_update(instance);
+    result = m_instance_update(instance, sprite);
     if (result != M_SUCCESS) {
       goto cleanup;
     }
@@ -32,6 +39,8 @@ int main() {
   }
 
 cleanup:
+  m_sprite_destroy(sprite, instance);
+  sprite = NULL;
   m_instance_destroy(instance);
   instance = NULL;
   m_window_destroy(window);
