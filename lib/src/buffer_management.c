@@ -98,14 +98,14 @@ enum M_Result create_buffer(const M_Instance *instance, VkDeviceSize size, VkBuf
   return result;
 }
 
-void vertex_buffer_create_free(const struct M_Instance *instance, VkBuffer buffer, VkDeviceMemory memory) {
+void buffer_create_free(const struct M_Instance *instance, VkBuffer buffer, VkDeviceMemory memory) {
   vkDestroyBuffer(instance->device.vk_device, buffer, NULL);
   vkFreeMemory(instance->device.vk_device, memory, NULL);
 }
 
-enum M_Result m_vertex_buffer_create(struct M_Instance *instance, const struct M_Vertex *data, uint32_t num_elements) {
+enum M_Result m_buffer_create(struct M_Buffer *buffer, struct M_Instance *instance, const void *data,
+                              VkDeviceSize buffer_size, VkBufferUsageFlags usage) {
   enum M_Result result = M_SUCCESS;
-  const VkDeviceSize buffer_size = sizeof(struct M_Vertex) * num_elements;
 
   VkBuffer staging_buffer;
   VkDeviceMemory staging_buffer_memory;
@@ -117,27 +117,26 @@ enum M_Result m_vertex_buffer_create(struct M_Instance *instance, const struct M
   void *mapped_memory;
   const VkResult vk_result =
       vkMapMemory(instance->device.vk_device, staging_buffer_memory, 0, buffer_size, 0, &mapped_memory);
-  return_result_if_err_clean(result, vertex_buffer_create_free, instance, staging_buffer, staging_buffer_memory);
+  return_result_if_err_clean(result, buffer_create_free, instance, staging_buffer, staging_buffer_memory);
   memcpy(mapped_memory, data, buffer_size);
   vkUnmapMemory(instance->device.vk_device, staging_buffer_memory);
 
-  result = create_buffer(instance, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &instance->buffer.vk_buffer, &instance->buffer.vk_memory);
-  return_result_if_err_clean(result, vertex_buffer_create_free, instance, staging_buffer, staging_buffer_memory);
+  result = create_buffer(instance, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &buffer->vk_buffer, &buffer->vk_memory);
+  return_result_if_err_clean(result, buffer_create_free, instance, staging_buffer, staging_buffer_memory);
 
-  result = copy_buffer(staging_buffer, instance->buffer.vk_buffer, buffer_size, instance);
+  result = copy_buffer(staging_buffer, buffer->vk_buffer, buffer_size, instance);
 
-  instance->buffer.num_elements = num_elements;
-  vertex_buffer_create_free(instance, staging_buffer, staging_buffer_memory);
+  buffer_create_free(instance, staging_buffer, staging_buffer_memory);
 
   return result;
 }
 
-void m_buffer_destroy(M_Instance *instance) {
-  if (instance->buffer.vk_buffer != NULL) {
-    vkDestroyBuffer(instance->device.vk_device, instance->buffer.vk_buffer, NULL);
+void m_buffer_destroy(struct M_Buffer *buffer, struct M_Instance *instance) {
+  if (buffer->vk_buffer != NULL) {
+    vkDestroyBuffer(instance->device.vk_device, buffer->vk_buffer, NULL);
   }
-  if (instance->buffer.vk_memory != NULL) {
-    vkFreeMemory(instance->device.vk_device, instance->buffer.vk_memory, NULL);
+  if (buffer->vk_memory != NULL) {
+    vkFreeMemory(instance->device.vk_device, buffer->vk_memory, NULL);
   }
 }

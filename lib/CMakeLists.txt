@@ -15,6 +15,7 @@ set(SOURCES
 	src/pipeline_management.c
 	src/render_management.c
 	src/buffer_management.c
+	src/render_object.c
 	src/window.c)
 
 find_package(Vulkan REQUIRED)

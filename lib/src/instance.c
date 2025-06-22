@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "pipeline_management.h"
 #include "render_management.h"
+#include "render_object.h"
 #include "result.h"
 #include "result_utils.h"
 #include "shader_management.h"
@@ -19,7 +20,8 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
 
-const uint32_t NUM_VERTICES = 3;
+const uint32_t NUM_VERTICES = 4;
+const uint32_t NUM_INDICES = 6;
 
 enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *window,
                                 const M_InstanceOptions *instance_options) {
@@ -57,13 +59,15 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   result = m_renderer_create(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
-  struct M_Vertex vertices[] = {
-      {.position = {0.0f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
-      {.position = {0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
-      {.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}},
+  const struct M_Vertex vertices[] = {
+      {.position = {-0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
+      {.position = {0.5f, -0.5f}, .color = {0.0f, 1.0f, 0.0f}},
+      {.position = {0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}},
+      {.position = {-0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}},
   };
+  const uint32_t indices[] = {0, 1, 2, 2, 3, 0};
 
-  result = m_vertex_buffer_create(*instance, vertices, NUM_VERTICES);
+  m_render_object_create(vertices, NUM_VERTICES, indices, NUM_INDICES, *instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   m_logger_info("Successfully initialised M_Instance");
@@ -80,7 +84,7 @@ enum M_Result m_instance_update(M_Instance *instance) {
 void m_instance_destroy(M_Instance *instance) {
   vkDeviceWaitIdle(instance->device.vk_device);
   if (instance != NULL) {
-    m_buffer_destroy(instance);
+    m_render_object_destroy(instance);
     m_renderer_destroy(instance);
     m_pipeline_destroy(instance);
     m_swap_chain_destroy(instance);

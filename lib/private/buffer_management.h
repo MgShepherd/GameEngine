@@ -2,7 +2,6 @@
 #define BUFFER_MANAGEMENT_H
 
 #include "instance.h"
-#include "shader_management.h"
 #include <vulkan/vulkan_core.h>
 
 struct M_Buffer {
@@ -11,7 +10,8 @@ struct M_Buffer {
   uint32_t num_elements;
 };
 
-enum M_Result m_vertex_buffer_create(struct M_Instance *instance, const struct M_Vertex *data, uint32_t num_elements);
-void m_buffer_destroy(M_Instance *instance);
+enum M_Result m_buffer_create(struct M_Buffer *buffer, struct M_Instance *instance, const void *data,
+                              VkDeviceSize buffer_size, VkBufferUsageFlags usage);
+void m_buffer_destroy(struct M_Buffer *buffer, struct M_Instance *instance);
 
 #endif // !BUFFER_MANAGEMENT_H

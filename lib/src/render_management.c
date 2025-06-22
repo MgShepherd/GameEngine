@@ -94,9 +94,13 @@ enum M_Result m_renderer_record(struct M_Instance *instance, uint32_t image_idx)
                        VK_SUBPASS_CONTENTS_INLINE);
   vkCmdBindPipeline(instance->renderer.command_buffers[current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                     instance->pipeline.vk_pipeline);
-  vkCmdBindVertexBuffers(instance->renderer.command_buffers[current_frame], 0, 1, &instance->buffer.vk_buffer, offsets);
+  vkCmdBindVertexBuffers(instance->renderer.command_buffers[current_frame], 0, 1,
+                         &instance->object.vertex_buf.vk_buffer, offsets);
+  vkCmdBindIndexBuffer(instance->renderer.command_buffers[current_frame], instance->object.index_buf.vk_buffer, 0,
+                       VK_INDEX_TYPE_UINT32);
 
-  vkCmdDraw(instance->renderer.command_buffers[current_frame], instance->buffer.num_elements, 1, 0, 0);
+  vkCmdDrawIndexed(instance->renderer.command_buffers[current_frame], instance->object.index_buf.num_elements, 1, 0, 0,
+                   0);
 
   vkCmdEndRenderPass(instance->renderer.command_buffers[current_frame]);
 
