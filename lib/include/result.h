@@ -7,6 +7,7 @@ enum M_Result {
   M_VULKAN_INIT_ERR,
   M_MEMORY_ALLOC_ERR,
   M_FILE_READ_ERR,
+  M_INPUT_ERR,
 };
 
 const char *m_result_to_string(enum M_Result result);

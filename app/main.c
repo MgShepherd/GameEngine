@@ -25,7 +25,14 @@ int main() {
     goto cleanup;
   }
 
-  result = m_sprite_create(&sprite, instance);
+  const struct M_SpriteProperties properties = {
+      .x = -0.5f,
+      .y = -0.5f,
+      .width = 1.0f,
+      .height = 1.0f,
+      .color = {.r = 1.0f},
+  };
+  result = m_sprite_create(&sprite, instance, &properties);
   if (result != M_SUCCESS) {
     goto cleanup;
   }

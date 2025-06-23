@@ -24,6 +24,8 @@ const char *m_result_to_string(enum M_Result result) {
     return "MEMORY_ALLOCATION";
   case M_FILE_READ_ERR:
     return "FILE_READ_ERROR";
+  case M_INPUT_ERR:
+    return "USER_INPUT_ERROR";
   }
 }
 
