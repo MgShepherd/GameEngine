@@ -5,6 +5,10 @@
 #include "sprite.h"
 #include <vulkan/vulkan_core.h>
 
+#ifndef MAX_FRAMES_IN_FLIGHT
+#define MAX_FRAMES_IN_FLIGHT 3
+#endif
+
 struct M_Renderer {
   VkCommandPool command_pool;
   VkCommandBuffer *command_buffers;

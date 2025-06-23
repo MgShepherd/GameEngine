@@ -8,6 +8,7 @@
 #include "result.h"
 #include "result_utils.h"
 #include "shader_management.h"
+#include "uniform_management.h"
 #include "vk_debug_messenger_helper.h"
 #include "vk_device_management.h"
 #include "vk_instance_helper.h"
@@ -56,6 +57,9 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   result = m_renderer_create(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
+  result = m_uniforms_create(*instance);
+  return_result_if_err_clean(result, m_instance_destroy, *instance);
+
   m_logger_info("Successfully initialised M_Instance");
 
   return result;
@@ -70,6 +74,7 @@ enum M_Result m_instance_update(M_Instance *instance, const M_Sprite *sprite) {
 void m_instance_destroy(M_Instance *instance) {
   vkDeviceWaitIdle(instance->device.vk_device);
   if (instance != NULL) {
+    m_uniforms_destroy(instance);
     m_renderer_destroy(instance);
     m_pipeline_destroy(instance);
     m_swap_chain_destroy(instance);

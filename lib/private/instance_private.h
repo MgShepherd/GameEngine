@@ -5,6 +5,7 @@
 #include "pipeline_management.h"
 #include "render_management.h"
 #include "render_object.h"
+#include "uniform_management.h"
 #include "vk_device_management.h"
 #include "vk_swap_chain_management.h"
 #include <vulkan/vulkan_core.h>
@@ -17,6 +18,7 @@ struct M_Instance {
   struct M_SwapChain swapchain;
   struct M_Pipeline pipeline;
   struct M_Renderer renderer;
+  struct M_Uniforms uniforms;
 };
 
 #endif // !M_INSTANCE_PRIVATE_H

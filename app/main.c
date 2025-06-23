@@ -26,10 +26,10 @@ int main() {
   }
 
   const struct M_SpriteProperties properties = {
-      .x = -0.5f,
-      .y = -0.5f,
-      .width = 1.0f,
-      .height = 1.0f,
+      .x = 32.0f,
+      .y = 32.0f,
+      .width = 32.0f,
+      .height = 32.0f,
       .color = {.r = 1.0f},
   };
   result = m_sprite_create(&sprite, instance, &properties);

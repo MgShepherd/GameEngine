@@ -227,6 +227,8 @@ enum M_Result create_pipeline_layout(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
   VkPipelineLayoutCreateInfo create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+      .setLayoutCount = 1,
+      .pSetLayouts = &instance->pipeline.descriptor_layout,
   };
 
   VkResult vk_result =
@@ -235,6 +237,26 @@ enum M_Result create_pipeline_layout(struct M_Instance *instance) {
 
   return result;
 };
+
+enum M_Result create_descriptor_layout(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+  const VkDescriptorSetLayoutBinding descriptor_binding = {
+      .binding = 0,
+      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .descriptorCount = 1,
+      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+  };
+
+  const VkDescriptorSetLayoutCreateInfo create_info = {
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      .bindingCount = 1,
+      .pBindings = &descriptor_binding,
+  };
+
+  VkResult vk_result = vkCreateDescriptorSetLayout(instance->device.vk_device, &create_info, NULL,
+                                                   &instance->pipeline.descriptor_layout);
+  return result;
+}
 
 void create_subpass_dependency(struct M_Instance *instance) {
   instance->pipeline.subpass_dependency = (VkSubpassDependency){
@@ -276,7 +298,9 @@ enum M_Result m_pipeline_create(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
   struct M_PipelineStages stages;
+
   return_result_if_err(create_stages(&stages, instance));
+  return_result_if_err(create_descriptor_layout(instance));
   return_result_if_err(create_pipeline_layout(instance));
   create_subpass_dependency(instance);
   return_result_if_err(create_render_pass(instance));
@@ -317,5 +341,9 @@ void m_pipeline_destroy(M_Instance *instance) {
   if (instance->pipeline.layout != NULL) {
     vkDestroyPipelineLayout(instance->device.vk_device, instance->pipeline.layout, NULL);
     instance->pipeline.layout = NULL;
+  }
+  if (instance->pipeline.descriptor_layout != NULL) {
+    vkDestroyDescriptorSetLayout(instance->device.vk_device, instance->pipeline.descriptor_layout, NULL);
+    instance->pipeline.descriptor_layout = NULL;
   }
 }

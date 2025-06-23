@@ -67,8 +67,8 @@ enum M_Result copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize
   return result;
 }
 
-enum M_Result create_buffer(const M_Instance *instance, VkDeviceSize size, VkBufferUsageFlags usage,
-                            VkMemoryPropertyFlags properties, VkBuffer *buffer, VkDeviceMemory *memory) {
+enum M_Result m_buffer_create(struct M_Buffer *buffer, const M_Instance *instance, VkDeviceSize size,
+                              VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) {
   enum M_Result result = M_SUCCESS;
   const VkBufferCreateInfo create_info = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -77,10 +77,10 @@ enum M_Result create_buffer(const M_Instance *instance, VkDeviceSize size, VkBuf
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
   };
 
-  vk_return_result_if_err(vkCreateBuffer(instance->device.vk_device, &create_info, NULL, buffer));
+  vk_return_result_if_err(vkCreateBuffer(instance->device.vk_device, &create_info, NULL, &buffer->vk_buffer));
 
   VkMemoryRequirements mem_requirements;
-  vkGetBufferMemoryRequirements(instance->device.vk_device, *buffer, &mem_requirements);
+  vkGetBufferMemoryRequirements(instance->device.vk_device, buffer->vk_buffer, &mem_requirements);
   const uint32_t type_idx =
       find_suitable_mem_type(instance->device.physical_device, mem_requirements.memoryTypeBits, properties);
   if (type_idx == UINT32_MAX) {
@@ -93,42 +93,35 @@ enum M_Result create_buffer(const M_Instance *instance, VkDeviceSize size, VkBuf
       .memoryTypeIndex = type_idx,
   };
 
-  vk_return_result_if_err(vkAllocateMemory(instance->device.vk_device, &allocate_info, NULL, memory));
-  vk_return_result_if_err(vkBindBufferMemory(instance->device.vk_device, *buffer, *memory, 0));
+  vk_return_result_if_err(vkAllocateMemory(instance->device.vk_device, &allocate_info, NULL, &buffer->vk_memory));
+  vk_return_result_if_err(vkBindBufferMemory(instance->device.vk_device, buffer->vk_buffer, buffer->vk_memory, 0));
 
   return result;
 }
 
-void buffer_create_free(const struct M_Instance *instance, VkBuffer buffer, VkDeviceMemory memory) {
-  vkDestroyBuffer(instance->device.vk_device, buffer, NULL);
-  vkFreeMemory(instance->device.vk_device, memory, NULL);
-}
-
-enum M_Result m_buffer_create(struct M_Buffer *buffer, const struct M_Instance *instance, const void *data,
-                              VkDeviceSize buffer_size, VkBufferUsageFlags usage) {
+enum M_Result m_buffer_create_and_allocate(struct M_Buffer *buffer, const struct M_Instance *instance, const void *data,
+                                           VkDeviceSize buffer_size, VkBufferUsageFlags usage) {
   enum M_Result result = M_SUCCESS;
 
-  VkBuffer staging_buffer;
-  VkDeviceMemory staging_buffer_memory;
-
-  result = create_buffer(instance, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer,
-                         &staging_buffer_memory);
+  struct M_Buffer staging_buffer;
+  result = m_buffer_create(&staging_buffer, instance, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+  return_result_if_err(result);
 
   void *mapped_memory;
   const VkResult vk_result =
-      vkMapMemory(instance->device.vk_device, staging_buffer_memory, 0, buffer_size, 0, &mapped_memory);
-  return_result_if_err_clean(result, buffer_create_free, instance, staging_buffer, staging_buffer_memory);
+      vkMapMemory(instance->device.vk_device, staging_buffer.vk_memory, 0, buffer_size, 0, &mapped_memory);
+  return_result_if_err_clean(result, m_buffer_destroy, &staging_buffer, instance);
   memcpy(mapped_memory, data, buffer_size);
-  vkUnmapMemory(instance->device.vk_device, staging_buffer_memory);
+  vkUnmapMemory(instance->device.vk_device, staging_buffer.vk_memory);
 
-  result = create_buffer(instance, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage,
-                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &buffer->vk_buffer, &buffer->vk_memory);
-  return_result_if_err_clean(result, buffer_create_free, instance, staging_buffer, staging_buffer_memory);
+  result = m_buffer_create(buffer, instance, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage,
+                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  return_result_if_err_clean(result, m_buffer_destroy, &staging_buffer, instance);
 
-  result = copy_buffer(staging_buffer, buffer->vk_buffer, buffer_size, instance);
+  result = copy_buffer(staging_buffer.vk_buffer, buffer->vk_buffer, buffer_size, instance);
 
-  buffer_create_free(instance, staging_buffer, staging_buffer_memory);
+  m_buffer_destroy(&staging_buffer, instance);
 
   return result;
 }

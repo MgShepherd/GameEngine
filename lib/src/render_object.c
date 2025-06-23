@@ -13,11 +13,13 @@ enum M_Result m_render_object_create(M_RenderObject *object, const M_Instance *i
   object->index_buf.num_elements = num_indices;
 
   const VkDeviceSize vert_buf_size = sizeof(struct M_Vertex) * num_vertices;
-  result = m_buffer_create(&object->vertex_buf, instance, vertices, vert_buf_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+  result = m_buffer_create_and_allocate(&object->vertex_buf, instance, vertices, vert_buf_size,
+                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
   return_result_if_err(result);
 
   const VkDeviceSize index_buf_size = sizeof(uint32_t) * num_indices;
-  result = m_buffer_create(&object->index_buf, instance, indices, index_buf_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+  result = m_buffer_create_and_allocate(&object->index_buf, instance, indices, index_buf_size,
+                                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
   return_result_if_err(result);
 
   return result;

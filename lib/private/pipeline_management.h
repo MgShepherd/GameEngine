@@ -6,6 +6,7 @@
 
 struct M_Pipeline {
   VkPipelineLayout layout;
+  VkDescriptorSetLayout descriptor_layout;
   VkRenderPass render_pass;
   VkSubpassDependency subpass_dependency;
   VkPipeline vk_pipeline;

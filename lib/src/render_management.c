@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
 
-const uint32_t MAX_FRAMES_IN_FLIGHT = 3;
-
 enum M_Result allocate_command_buffers(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;
 
@@ -99,6 +97,8 @@ enum M_Result m_renderer_record(const struct M_Instance *instance, const M_Sprit
                          offsets);
   vkCmdBindIndexBuffer(instance->renderer.command_buffers[current_frame], sprite->object.index_buf.vk_buffer, 0,
                        VK_INDEX_TYPE_UINT32);
+  vkCmdBindDescriptorSets(instance->renderer.command_buffers[current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          instance->pipeline.layout, 0, 1, &instance->uniforms.descriptor_sets[current_frame], 0, NULL);
 
   vkCmdDrawIndexed(instance->renderer.command_buffers[current_frame], sprite->object.index_buf.num_elements, 1, 0, 0,
                    0);

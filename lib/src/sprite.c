@@ -17,13 +17,10 @@ const uint32_t NUM_INDICES = 6;
 const uint32_t NUM_VERTICES = 4;
 const uint32_t indices[] = {0, 1, 2, 2, 3, 0};
 
-bool validate_dimension(float dimension) { return dimension > 0 && dimension <= 2.0f; }
-
-bool validate_location(float location) { return location >= -1.0f && location <= 1.0f; }
+bool validate_dimension(float dimension) { return dimension > 0; }
 
 bool validate_sprite_properties(const struct M_SpriteProperties *properties) {
-  return validate_location(properties->x) && validate_location(properties->y) &&
-         validate_dimension(properties->width) && validate_dimension(properties->height);
+  return validate_dimension(properties->width) && validate_dimension(properties->height);
 }
 
 enum M_Result m_sprite_create(M_Sprite **sprite, const M_Instance *instance,
