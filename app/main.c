@@ -1,9 +1,11 @@
 #include "instance.h"
+#include "logger.h"
 #include "result.h"
 #include "sprite.h"
 #include "window.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 int main() {
   M_Window *window = NULL;
@@ -19,6 +21,7 @@ int main() {
   const M_InstanceOptions options = {
       .app_name = app_name,
       .enable_debug = true,
+      .clear_color = {.r = 91.0f / 255.0f, .g = 188.f / 255.0f, .b = 228.0f / 255.0f},
   };
   result = m_instance_create(&instance, window, &options);
   if (result != M_SUCCESS) {

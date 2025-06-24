@@ -19,6 +19,7 @@ struct M_Instance {
   struct M_Pipeline pipeline;
   struct M_Renderer renderer;
   struct M_Uniforms uniforms;
+  struct M_Color clear_color;
 };
 
 #endif // !M_INSTANCE_PRIVATE_H

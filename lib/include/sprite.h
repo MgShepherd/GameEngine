@@ -1,11 +1,9 @@
 #ifndef SPRITE_H
 #define SPRITE_H
 
-typedef struct M_Sprite M_Sprite;
+#include "types.h"
 
-struct M_Color {
-  float r, g, b;
-};
+typedef struct M_Sprite M_Sprite;
 
 struct M_SpriteProperties {
   float x, y, width, height;

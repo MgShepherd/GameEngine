@@ -73,7 +73,8 @@ enum M_Result m_renderer_record(const struct M_Instance *instance, const M_Sprit
 
   vk_return_result_if_err(vkBeginCommandBuffer(instance->renderer.command_buffers[current_frame], &begin_info));
 
-  const VkClearValue clear_color = {.color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}};
+  const VkClearValue clear_color = {
+      .color = {.float32 = {instance->clear_color.r, instance->clear_color.g, instance->clear_color.b, 1.0f}}};
   const VkRenderPassBeginInfo render_begin_info = {
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
       .renderPass = instance->pipeline.render_pass,
