@@ -67,9 +67,9 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   return result;
 }
 
-enum M_Result m_instance_update(M_Instance *instance, const M_Sprite *sprite) {
+enum M_Result m_instance_update(M_Instance *instance, M_Sprite **sprites, uint32_t num_sprites) {
   enum M_Result result = M_SUCCESS;
-  return_result_if_err_clean(m_renderer_render(instance, sprite), m_instance_destroy, instance);
+  return_result_if_err_clean(m_renderer_render(instance, sprites, num_sprites), m_instance_destroy, instance);
   return result;
 }
 

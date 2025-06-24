@@ -10,7 +10,8 @@
 int main() {
   M_Window *window = NULL;
   M_Instance *instance = NULL;
-  M_Sprite *sprite = NULL;
+  const uint32_t num_sprites = 2;
+  M_Sprite **sprites = NULL;
   const char *app_name = "Game Engine";
 
   enum M_Result result = m_window_create(&window, app_name, 640, 480);
@@ -28,20 +29,27 @@ int main() {
     goto cleanup;
   }
 
-  const struct M_SpriteProperties properties = {
-      .x = 32.0f,
-      .y = 32.0f,
-      .width = 32.0f,
-      .height = 32.0f,
-      .color = {.r = 1.0f},
-  };
-  result = m_sprite_create(&sprite, instance, &properties);
+  sprites = malloc(sizeof(M_Sprite *) * num_sprites);
+  if (sprites == NULL) {
+    goto cleanup;
+  }
+
+  for (uint32_t i = 0; i < num_sprites; i++) {
+    const struct M_SpriteProperties properties = {
+        .x = 32.0f + (32.0f * i),
+        .y = 32.0f + (32.0f * i),
+        .width = 32.0f,
+        .height = 32.0f,
+        .color = {.r = 1.0f},
+    };
+    result = m_sprite_create(&sprites[i], instance, &properties);
+  }
   if (result != M_SUCCESS) {
     goto cleanup;
   }
 
   while (m_window_is_open(window)) {
-    result = m_instance_update(instance, sprite);
+    result = m_instance_update(instance, sprites, num_sprites);
     if (result != M_SUCCESS) {
       goto cleanup;
     }
@@ -49,8 +57,12 @@ int main() {
   }
 
 cleanup:
-  m_sprite_destroy(sprite, instance);
-  sprite = NULL;
+  for (uint32_t i = 0; i < num_sprites; i++) {
+    m_sprite_destroy(sprites[i], instance);
+    sprites[i] = NULL;
+  }
+  free(sprites);
+  sprites = NULL;
   m_instance_destroy(instance);
   instance = NULL;
   m_window_destroy(window);

@@ -63,7 +63,8 @@ enum M_Result create_sync_objects(struct M_Instance *instance) {
   return result;
 }
 
-enum M_Result m_renderer_record(const struct M_Instance *instance, const M_Sprite *sprite, uint32_t image_idx) {
+enum M_Result m_renderer_record(const struct M_Instance *instance, M_Sprite **sprites, uint32_t num_sprites,
+                                uint32_t image_idx) {
   enum M_Result result = M_SUCCESS;
   const uint32_t current_frame = instance->renderer.current_frame;
 
@@ -94,15 +95,17 @@ enum M_Result m_renderer_record(const struct M_Instance *instance, const M_Sprit
                        VK_SUBPASS_CONTENTS_INLINE);
   vkCmdBindPipeline(instance->renderer.command_buffers[current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                     instance->pipeline.vk_pipeline);
-  vkCmdBindVertexBuffers(instance->renderer.command_buffers[current_frame], 0, 1, &sprite->object.vertex_buf.vk_buffer,
-                         offsets);
-  vkCmdBindIndexBuffer(instance->renderer.command_buffers[current_frame], sprite->object.index_buf.vk_buffer, 0,
-                       VK_INDEX_TYPE_UINT32);
   vkCmdBindDescriptorSets(instance->renderer.command_buffers[current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                           instance->pipeline.layout, 0, 1, &instance->uniforms.descriptor_sets[current_frame], 0, NULL);
 
-  vkCmdDrawIndexed(instance->renderer.command_buffers[current_frame], sprite->object.index_buf.num_elements, 1, 0, 0,
-                   0);
+  for (uint32_t i = 0; i < num_sprites; i++) {
+    vkCmdBindVertexBuffers(instance->renderer.command_buffers[current_frame], 0, 1,
+                           &sprites[i]->object.vertex_buf.vk_buffer, offsets);
+    vkCmdBindIndexBuffer(instance->renderer.command_buffers[current_frame], sprites[i]->object.index_buf.vk_buffer, 0,
+                         VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(instance->renderer.command_buffers[current_frame], sprites[i]->object.index_buf.num_elements, 1, 0,
+                     0, 0);
+  }
 
   vkCmdEndRenderPass(instance->renderer.command_buffers[current_frame]);
 
@@ -123,7 +126,7 @@ enum M_Result m_renderer_create(struct M_Instance *instance) {
   return result;
 }
 
-enum M_Result m_renderer_render(struct M_Instance *instance, const struct M_Sprite *sprite) {
+enum M_Result m_renderer_render(struct M_Instance *instance, struct M_Sprite **sprites, uint32_t num_sprites) {
   enum M_Result result = M_SUCCESS;
   const uint32_t current_frame = instance->renderer.current_frame;
 
@@ -139,7 +142,7 @@ enum M_Result m_renderer_render(struct M_Instance *instance, const struct M_Spri
   vk_return_result_if_err(vk_result);
 
   vk_return_result_if_err(vkResetCommandBuffer(instance->renderer.command_buffers[current_frame], 0));
-  return_result_if_err(m_renderer_record(instance, sprite, current_image_idx));
+  return_result_if_err(m_renderer_record(instance, sprites, num_sprites, current_image_idx));
 
   const VkPipelineStageFlags wait_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   const VkSubmitInfo submit_info = {

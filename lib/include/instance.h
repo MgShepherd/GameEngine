@@ -21,6 +21,6 @@ void m_instance_destroy(M_Instance *instance);
 
 void m_instance_set_clear_color(M_Instance *instance, struct M_Color color);
 
-enum M_Result m_instance_update(M_Instance *instance, const M_Sprite *sprite);
+enum M_Result m_instance_update(M_Instance *instance, M_Sprite **sprites, uint32_t num_sprites);
 
 #endif // !INSTANCE_H
