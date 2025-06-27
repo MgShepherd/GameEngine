@@ -1,5 +1,5 @@
-#ifndef RENDER_MANAGEMENT_H
-#define RENDER_MANAGEMENT_H
+#ifndef M_RENDER_MANAGEMENT_H
+#define M_RENDER_MANAGEMENT_H
 
 #include "instance.h"
 #include "sprite.h"
@@ -28,4 +28,4 @@ enum M_Result m_renderer_render_end(struct M_Instance *instance);
 enum M_Result m_renderer_render_buffer(const struct M_Instance *instance, VkBuffer vertex_buf, VkBuffer index_buf,
                                        uint32_t num_indices);
 
-#endif // !RENDER_MANAGEMENT_H
+#endif

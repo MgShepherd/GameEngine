@@ -1,5 +1,5 @@
-#ifndef RESULT_UTILS_H
-#define RESULT_UTILS_H
+#ifndef M_RESULT_UTILS_H
+#define M_RESULT_UTILS_H
 
 #define return_result_if_null(var, code, message)                                                                      \
   if (var == NULL) {                                                                                                   \
@@ -58,4 +58,4 @@
     return NULL;                                                                                                       \
   }
 
-#endif // !RESULT_UTILS_H
+#endif

@@ -1,5 +1,5 @@
-#ifndef BUFFER_MANAGEMENT_H
-#define BUFFER_MANAGEMENT_H
+#ifndef M_BUFFER_MANAGEMENT_H
+#define M_BUFFER_MANAGEMENT_H
 
 #include "instance.h"
 #include <vulkan/vulkan_core.h>
@@ -16,4 +16,4 @@ enum M_Result m_buffer_create_and_allocate(struct M_Buffer *buffer, const struct
                                            VkDeviceSize buffer_size, VkBufferUsageFlags usage);
 void m_buffer_destroy(struct M_Buffer *buffer, const struct M_Instance *instance);
 
-#endif // !BUFFER_MANAGEMENT_H
+#endif

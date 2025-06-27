@@ -1,9 +1,9 @@
-#include "vk_utils.h"
+#include "m_utils.h"
 
+#include "device_management.h"
 #include "instance_private.h"
 #include "result.h"
 #include "result_utils.h"
-#include "vk_device_management.h"
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
 
@@ -20,7 +20,7 @@ enum M_Result create_command_pool(VkCommandPool *command_pool, VkCommandPoolCrea
   enum M_Result result = M_SUCCESS;
 
   const struct M_QueueFamilyIndices queue_families =
-      vk_physical_device_get_queue_families(instance->device.physical_device, instance);
+      m_physical_device_get_queue_families(instance->device.physical_device, instance);
 
   const VkCommandPoolCreateInfo create_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,

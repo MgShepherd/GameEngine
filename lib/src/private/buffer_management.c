@@ -1,10 +1,10 @@
 #include "buffer_management.h"
 #include "instance_private.h"
 #include "logger.h"
+#include "m_utils.h"
 #include "result.h"
 #include "result_utils.h"
 #include "shader_management.h"
-#include "vk_utils.h"
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 

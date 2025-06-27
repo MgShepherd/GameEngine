@@ -1,5 +1,5 @@
-#ifndef SPRITE_H
-#define SPRITE_H
+#ifndef M_SPRITE_H
+#define M_SPRITE_H
 
 #include "types.h"
 
@@ -16,4 +16,4 @@ enum M_Result m_sprite_create(M_Sprite **sprite, const M_Instance *instance,
                               const struct M_SpriteProperties *properties);
 void m_sprite_destroy(M_Sprite *sprite, const M_Instance *instance);
 
-#endif // !SPRITE_H
+#endif

@@ -1,10 +1,10 @@
-#include "vk_swap_chain_management.h"
+#include "swap_chain_management.h"
 #include "GLFW/glfw3.h"
+#include "device_management.h"
 #include "instance_private.h"
+#include "m_utils.h"
 #include "result.h"
 #include "result_utils.h"
-#include "vk_device_management.h"
-#include "vk_utils.h"
 #include "window_private.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -182,7 +182,7 @@ enum M_Result m_swap_chain_create(struct M_Instance *instance, const M_Window *w
   };
 
   const struct M_QueueFamilyIndices queue_indices =
-      vk_physical_device_get_queue_families(instance->device.physical_device, instance);
+      m_physical_device_get_queue_families(instance->device.physical_device, instance);
   assert(queue_indices.present != UINT32_MAX && queue_indices.graphics != UINT32_MAX);
 
   uint32_t indices[] = {queue_indices.present, queue_indices.graphics};

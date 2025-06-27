@@ -6,20 +6,20 @@ set(SOURCES
 	src/logger.c
 	src/instance.c
 	src/result.c
-	src/vk_instance_helper.c
-	src/vk_debug_messenger_helper.c
-	src/vk_utils.c
-	src/vk_device_management.c
-	src/vk_swap_chain_management.c
-	src/shader_management.c
-	src/pipeline_management.c
-	src/render_management.c
-	src/buffer_management.c
-	src/render_object.c
-	src/uniform_management.c
 	src/render.c
+	src/window.c
 	src/sprite.c
-	src/window.c)
+	src/private/vulkan_management.c
+	src/private/debug_messenger.c
+	src/private/m_utils.c
+	src/private/device_management.c
+	src/private/swap_chain_management.c
+	src/private/shader_management.c
+	src/private/pipeline_management.c
+	src/private/render_management.c
+	src/private/buffer_management.c
+	src/private/render_object.c
+	src/private/uniform_management.c)
 
 find_package(Vulkan REQUIRED)
 

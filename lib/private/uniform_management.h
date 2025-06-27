@@ -1,5 +1,5 @@
-#ifndef UNIFORM_MANAGEMENT_H
-#define UNIFORM_MANAGEMENT_H
+#ifndef M_UNIFORM_MANAGEMENT_H
+#define M_UNIFORM_MANAGEMENT_H
 
 #include "buffer_management.h"
 #include "cglm/types.h"
@@ -20,4 +20,4 @@ struct M_Uniforms {
 enum M_Result m_uniforms_create(M_Instance *instance);
 void m_uniforms_destroy(M_Instance *instance);
 
-#endif // !UNIFORM_MANAGEMENT_H
+#endif

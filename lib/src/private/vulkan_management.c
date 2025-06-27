@@ -1,11 +1,11 @@
-#include "vk_instance_helper.h"
+#include "vulkan_management.h"
 #include "GLFW/glfw3.h"
+#include "debug_messenger.h"
 #include "instance.h"
 #include "logger.h"
+#include "m_utils.h"
 #include "result.h"
 #include "result_utils.h"
-#include "vk_debug_messenger_helper.h"
-#include "vk_utils.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -101,14 +101,14 @@ const char **get_validation_layers() {
   return required_layers;
 }
 
-void cleanup_vk_instance_create(const char **extensions, const char **validation_layers) {
+void cleanup_instance_create(const char **extensions, const char **validation_layers) {
   if (extensions != NULL)
     free(extensions);
   if (validation_layers != NULL)
     free(validation_layers);
 }
 
-enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOptions *instance_options) {
+enum M_Result m_vulkan_instance_create(VkInstance *vk_instance, const M_InstanceOptions *instance_options) {
   enum M_Result result = M_SUCCESS;
   const char **validation_layers = NULL;
   const char **extensions = NULL;
@@ -129,8 +129,8 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
   uint32_t num_extensions = 0;
   extensions = get_required_extensions(&num_extensions);
   const char *extensions_failed_msg = "Unable to load required instance extensions";
-  return_result_if_null_clean(extensions, M_VULKAN_INIT_ERR, extensions_failed_msg, cleanup_vk_instance_create,
-                              extensions, validation_layers);
+  return_result_if_null_clean(extensions, M_VULKAN_INIT_ERR, extensions_failed_msg, cleanup_instance_create, extensions,
+                              validation_layers);
   instance_create_info.enabledExtensionCount = num_extensions;
   instance_create_info.ppEnabledExtensionNames = extensions;
 
@@ -138,13 +138,13 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
   if (instance_options->enable_debug) {
     validation_layers = get_validation_layers();
     const char *validations_failed_msg = "Unable to load requested validation layers";
-    return_result_if_null_clean(validation_layers, M_VULKAN_INIT_ERR, validations_failed_msg,
-                                cleanup_vk_instance_create, extensions, validation_layers);
+    return_result_if_null_clean(validation_layers, M_VULKAN_INIT_ERR, validations_failed_msg, cleanup_instance_create,
+                                extensions, validation_layers);
 
     instance_create_info.enabledLayerCount = NUM_VALIDATION_LAYERS;
     instance_create_info.ppEnabledLayerNames = validation_layers;
 
-    vk_debug_messenger_fill_create_info(&debug_messenger_create_info);
+    m_debug_messenger_fill_create_info(&debug_messenger_create_info);
     instance_create_info.pNext = &debug_messenger_create_info;
     m_logger_info("Validation layers enabled");
   } else {
@@ -152,13 +152,13 @@ enum M_Result vk_instance_create(VkInstance *vk_instance, const M_InstanceOption
   }
 
   VkResult vk_result = vkCreateInstance(&instance_create_info, NULL, vk_instance);
-  vk_return_result_if_err_clean(vk_result, cleanup_vk_instance_create, extensions, validation_layers);
+  vk_return_result_if_err_clean(vk_result, cleanup_instance_create, extensions, validation_layers);
 
-  cleanup_vk_instance_create(extensions, validation_layers);
+  cleanup_instance_create(extensions, validation_layers);
   return result;
 }
 
-void vk_instance_destroy(VkInstance instance) {
+void m_vulkan_instance_destroy(VkInstance instance) {
   if (instance != NULL) {
     vkDestroyInstance(instance, NULL);
   }

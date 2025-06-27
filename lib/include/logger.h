@@ -1,13 +1,7 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+#ifndef M_LOGGER_H
+#define M_LOGGER_H
 
-enum M_LogLevel {
-  M_VERBOSE,
-  M_INFO,
-  M_WARN,
-  M_ERROR,
-  M_NONE
-};
+enum M_LogLevel { M_VERBOSE, M_INFO, M_WARN, M_ERROR, M_NONE };
 
 /**
  * @brief Initalises Logger

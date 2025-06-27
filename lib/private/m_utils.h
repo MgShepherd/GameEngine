@@ -1,5 +1,5 @@
-#ifndef VK_UTILS_H
-#define VK_UTILS_H
+#ifndef M_UTILS_H
+#define M_UTILS_H
 
 #include "instance.h"
 #include <vulkan/vulkan_core.h>

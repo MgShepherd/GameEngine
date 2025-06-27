@@ -1,10 +1,10 @@
 #include "render.h"
 #include "instance_private.h"
+#include "m_utils.h"
 #include "render_management.h"
 #include "result.h"
 #include "result_utils.h"
 #include "sprite_private.h"
-#include "vk_utils.h"
 
 enum M_Result m_render_begin(struct M_Instance *instance) {
   enum M_Result result = M_SUCCESS;

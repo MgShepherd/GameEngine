@@ -1,5 +1,5 @@
-#ifndef RESULT_H
-#define RESULT_H
+#ifndef M_RESULT_H
+#define M_RESULT_H
 
 enum M_Result {
   M_SUCCESS,
@@ -17,4 +17,4 @@ void m_result_set_handler(enum M_Result (*handler)(enum M_Result code, const cha
 
 enum M_Result m_result_process(enum M_Result code, const char *description);
 
-#endif // !RESULT_H
+#endif

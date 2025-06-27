@@ -1,5 +1,5 @@
-#ifndef RENDER_OBJECT_H
-#define RENDER_OBJECT_H
+#ifndef M_RENDER_OBJECT_H
+#define M_RENDER_OBJECT_H
 
 #include "buffer_management.h"
 #include "instance.h"
@@ -18,4 +18,4 @@ enum M_Result m_render_object_create(M_RenderObject *object, const M_Instance *i
                                      uint32_t num_indices);
 void m_render_object_destroy(M_RenderObject *object, const M_Instance *instance);
 
-#endif // !RENDER_OBJECT_H
+#endif

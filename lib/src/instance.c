@@ -1,5 +1,7 @@
 #include "instance.h"
 #include "buffer_management.h"
+#include "debug_messenger.h"
+#include "device_management.h"
 #include "instance_private.h"
 #include "logger.h"
 #include "pipeline_management.h"
@@ -8,11 +10,9 @@
 #include "result.h"
 #include "result_utils.h"
 #include "shader_management.h"
+#include "swap_chain_management.h"
 #include "uniform_management.h"
-#include "vk_debug_messenger_helper.h"
-#include "vk_device_management.h"
-#include "vk_instance_helper.h"
-#include "vk_swap_chain_management.h"
+#include "vulkan_management.h"
 #include "window.h"
 #include <stdio.h>
 
@@ -28,21 +28,21 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   *instance = malloc(sizeof(struct M_Instance));
   return_result_if_null_clean(*instance, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", m_instance_destroy,
                               *instance);
-  result = vk_instance_create(&(*instance)->vk_instance, instance_options);
+  result = m_vulkan_instance_create(&(*instance)->vk_instance, instance_options);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   if (instance_options->enable_debug) {
-    result = vk_debug_messenger_create(&(*instance)->vk_debug_messenger, (*instance)->vk_instance);
+    result = m_debug_messenger_create(&(*instance)->vk_debug_messenger, (*instance)->vk_instance);
     return_result_if_err_clean(result, m_instance_destroy, *instance);
   }
 
   result = m_window_surface_create(window, *instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
-  result = vk_physical_device_find(*instance);
+  result = m_physical_device_find(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
-  result = vk_device_create(*instance);
+  result = m_device_create(*instance);
   return_result_if_err_clean(result, m_instance_destroy, *instance);
 
   result = m_swap_chain_create(*instance, window);
@@ -76,12 +76,12 @@ void m_instance_destroy(M_Instance *instance) {
     m_renderer_destroy(instance);
     m_pipeline_destroy(instance);
     m_swap_chain_destroy(instance);
-    vk_device_destroy(&instance->device);
+    m_device_destroy(&instance->device);
     m_window_surface_destroy(instance);
     instance->vk_surface = NULL;
-    vk_debug_messenger_destroy(instance->vk_debug_messenger, instance->vk_instance);
+    m_debug_messenger_destroy(instance->vk_debug_messenger, instance->vk_instance);
     instance->vk_debug_messenger = NULL;
-    vk_instance_destroy(instance->vk_instance);
+    m_vulkan_instance_destroy(instance->vk_instance);
     instance->vk_instance = NULL;
     free(instance);
   }

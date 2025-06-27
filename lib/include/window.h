@@ -1,5 +1,5 @@
-#ifndef WINDOW_H
-#define WINDOW_H
+#ifndef M_WINDOW_H
+#define M_WINDOW_H
 
 #include <stdbool.h>
 #include <vulkan/vulkan_core.h>
@@ -16,4 +16,4 @@ void m_window_destroy(M_Window *window);
 enum M_Result m_window_surface_create(const M_Window *window, M_Instance *instance);
 void m_window_surface_destroy(M_Instance *instance);
 
-#endif // WINDOW_H
+#endif

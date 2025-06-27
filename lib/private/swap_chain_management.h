@@ -1,5 +1,5 @@
-#ifndef SWAP_CHAIN_MANAGEMENT_H
-#define SWAP_CHAIN_MANAGEMENT_H
+#ifndef M_SWAP_CHAIN_MANAGEMENT_H
+#define M_SWAP_CHAIN_MANAGEMENT_H
 
 #include "instance.h"
 #include <stdint.h>
@@ -32,4 +32,4 @@ void m_swap_chain_destroy(M_Instance *instance);
 
 enum M_Result m_swap_chain_framebuffers_create(M_Instance *instance);
 
-#endif // !SWAP_CHAIN_MANAGEMENT_H
+#endif

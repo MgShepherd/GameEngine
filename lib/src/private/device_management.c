@@ -1,10 +1,10 @@
-#include "vk_device_management.h"
+#include "device_management.h"
 #include "instance_private.h"
 #include "logger.h"
+#include "m_utils.h"
 #include "result.h"
 #include "result_utils.h"
-#include "vk_swap_chain_management.h"
-#include "vk_utils.h"
+#include "swap_chain_management.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -18,7 +18,7 @@ const uint32_t NUM_OPTIONAL_EXTENSIONS = 1;
 const char *OPTIONAL_EXTENSIONS[] = {"VK_KHR_portability_subset"};
 const char *REQUIRED_EXTENSIONS[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
+bool m_physical_device_supports_required_extensions(VkPhysicalDevice device) {
   uint32_t num_available_extensions = 0;
   vk_return_false_if_err(vkEnumerateDeviceExtensionProperties(device, NULL, &num_available_extensions, NULL));
   VkExtensionProperties available_extensions[num_available_extensions];
@@ -42,11 +42,11 @@ bool vk_physical_device_supports_required_extensions(VkPhysicalDevice device) {
   return true;
 }
 
-bool vk_physical_device_is_suitable(VkPhysicalDevice device, const struct M_Instance *instance) {
-  struct M_QueueFamilyIndices indices = vk_physical_device_get_queue_families(device, instance);
+bool m_physical_device_is_suitable(VkPhysicalDevice device, const struct M_Instance *instance) {
+  struct M_QueueFamilyIndices indices = m_physical_device_get_queue_families(device, instance);
   if (indices.graphics == UINT32_MAX || indices.present == UINT32_MAX)
     return false;
-  if (!vk_physical_device_supports_required_extensions(device))
+  if (!m_physical_device_supports_required_extensions(device))
     return false;
 
   struct M_SwapChainSupport swap_support;
@@ -106,8 +106,8 @@ void add_device_queue_create_info(VkDeviceQueueCreateInfo *create_infos, uint32_
   };
 }
 
-struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevice device,
-                                                                  const struct M_Instance *instance) {
+struct M_QueueFamilyIndices m_physical_device_get_queue_families(VkPhysicalDevice device,
+                                                                 const struct M_Instance *instance) {
   struct M_QueueFamilyIndices indices = {.graphics = UINT32_MAX, .present = UINT32_MAX};
   uint32_t remaining_queues_to_find = NUM_REQUIRED_QUEUES;
 
@@ -138,7 +138,7 @@ struct M_QueueFamilyIndices vk_physical_device_get_queue_families(VkPhysicalDevi
   return indices;
 }
 
-enum M_Result vk_physical_device_find(struct M_Instance *instance) {
+enum M_Result m_physical_device_find(struct M_Instance *instance) {
   assert(instance->vk_instance != NULL && instance->vk_surface != NULL);
   instance->device.physical_device = NULL;
 
@@ -149,7 +149,7 @@ enum M_Result vk_physical_device_find(struct M_Instance *instance) {
 
   for (uint32_t i = 0; i < device_count; i++) {
     m_logger_info("Looking at device index %d", i);
-    if (vk_physical_device_is_suitable(available_devices[i], instance)) {
+    if (m_physical_device_is_suitable(available_devices[i], instance)) {
       m_logger_info("Found device");
       instance->device.physical_device = available_devices[i];
       break;
@@ -163,12 +163,12 @@ enum M_Result vk_physical_device_find(struct M_Instance *instance) {
   return result;
 }
 
-enum M_Result vk_device_create(struct M_Instance *instance) {
+enum M_Result m_device_create(struct M_Instance *instance) {
   assert(instance->device.physical_device != NULL && instance->vk_instance != NULL && instance->vk_surface != NULL);
   enum M_Result result = M_SUCCESS;
 
   struct M_QueueFamilyIndices queue_families =
-      vk_physical_device_get_queue_families(instance->device.physical_device, instance);
+      m_physical_device_get_queue_families(instance->device.physical_device, instance);
   float queue_priority = 1.0f;
 
   VkDeviceQueueCreateInfo device_queue_create_infos[NUM_REQUIRED_QUEUES];
@@ -203,7 +203,7 @@ enum M_Result vk_device_create(struct M_Instance *instance) {
   return result;
 }
 
-void vk_device_destroy(struct M_Device *device) {
+void m_device_destroy(struct M_Device *device) {
   if (device->vk_device != NULL) {
     vkDestroyDevice(device->vk_device, NULL);
     device->vk_device = NULL;

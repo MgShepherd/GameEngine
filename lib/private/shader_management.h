@@ -1,5 +1,5 @@
-#ifndef SHADER_MANAGEMENT_H
-#define SHADER_MANAGEMENT_H
+#ifndef M_SHADER_MANAGEMENT_H
+#define M_SHADER_MANAGEMENT_H
 
 #include "cglm/types.h"
 #include "instance.h"
@@ -17,4 +17,4 @@ void m_shader_get_input_binding(VkVertexInputBindingDescription *binding_descrip
 enum M_Result m_shader_get_input_attributes(VkVertexInputAttributeDescription **attribute_descriptions,
                                             uint32_t *num_attributes);
 
-#endif // !SHADER_MANAGEMENT_H
+#endif

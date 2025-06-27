@@ -1,7 +1,7 @@
-#include "vk_debug_messenger_helper.h"
+#include "debug_messenger.h"
 #include "logger.h"
+#include "m_utils.h"
 #include "result.h"
-#include "vk_utils.h"
 #include <vulkan/vulkan_core.h>
 
 void display_debug_callback_message(VkDebugUtilsMessageSeverityFlagBitsEXT severity, const char *message) {
@@ -48,7 +48,7 @@ void debug_utils_messenger_destroy(VkInstance instance, VkDebugUtilsMessengerEXT
   }
 }
 
-void vk_debug_messenger_fill_create_info(VkDebugUtilsMessengerCreateInfoEXT *create_info) {
+void m_debug_messenger_fill_create_info(VkDebugUtilsMessengerCreateInfoEXT *create_info) {
   *create_info = (VkDebugUtilsMessengerCreateInfoEXT){
       .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
       .messageSeverity =
@@ -61,17 +61,17 @@ void vk_debug_messenger_fill_create_info(VkDebugUtilsMessengerCreateInfoEXT *cre
   };
 }
 
-enum M_Result vk_debug_messenger_create(VkDebugUtilsMessengerEXT *vk_debug_messenger, VkInstance instance) {
+enum M_Result m_debug_messenger_create(VkDebugUtilsMessengerEXT *vk_debug_messenger, VkInstance instance) {
   enum M_Result result = M_SUCCESS;
 
   VkDebugUtilsMessengerCreateInfoEXT create_info;
-  vk_debug_messenger_fill_create_info(&create_info);
+  m_debug_messenger_fill_create_info(&create_info);
   result = process_vulkan_result(debug_utils_messenger_create(instance, &create_info, NULL, vk_debug_messenger));
 
   return result;
 }
 
-void vk_debug_messenger_destroy(VkDebugUtilsMessengerEXT vk_debug_messenger, VkInstance instance) {
+void m_debug_messenger_destroy(VkDebugUtilsMessengerEXT vk_debug_messenger, VkInstance instance) {
   if (vk_debug_messenger != NULL && instance != NULL) {
     debug_utils_messenger_destroy(instance, vk_debug_messenger, NULL);
   }

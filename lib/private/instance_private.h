@@ -2,12 +2,12 @@
 #define M_INSTANCE_PRIVATE_H
 
 #include "buffer_management.h"
+#include "device_management.h"
 #include "pipeline_management.h"
 #include "render_management.h"
 #include "render_object.h"
+#include "swap_chain_management.h"
 #include "uniform_management.h"
-#include "vk_device_management.h"
-#include "vk_swap_chain_management.h"
 #include <vulkan/vulkan_core.h>
 
 struct M_Instance {
