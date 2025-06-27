@@ -63,8 +63,7 @@ enum M_Result create_sync_objects(struct M_Instance *instance) {
   return result;
 }
 
-enum M_Result m_renderer_record(const struct M_Instance *instance, M_Sprite **sprites, uint32_t num_sprites,
-                                uint32_t image_idx) {
+enum M_Result m_renderer_prepare(const struct M_Instance *instance, uint32_t image_idx) {
   enum M_Result result = M_SUCCESS;
   const uint32_t current_frame = instance->renderer.current_frame;
 
@@ -97,54 +96,14 @@ enum M_Result m_renderer_record(const struct M_Instance *instance, M_Sprite **sp
                     instance->pipeline.vk_pipeline);
   vkCmdBindDescriptorSets(instance->renderer.command_buffers[current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                           instance->pipeline.layout, 0, 1, &instance->uniforms.descriptor_sets[current_frame], 0, NULL);
-
-  for (uint32_t i = 0; i < num_sprites; i++) {
-    vkCmdBindVertexBuffers(instance->renderer.command_buffers[current_frame], 0, 1,
-                           &sprites[i]->object.vertex_buf.vk_buffer, offsets);
-    vkCmdBindIndexBuffer(instance->renderer.command_buffers[current_frame], sprites[i]->object.index_buf.vk_buffer, 0,
-                         VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(instance->renderer.command_buffers[current_frame], sprites[i]->object.index_buf.num_elements, 1, 0,
-                     0, 0);
-  }
-
-  vkCmdEndRenderPass(instance->renderer.command_buffers[current_frame]);
-
-  vk_return_result_if_err(vkEndCommandBuffer(instance->renderer.command_buffers[current_frame]));
-
   return result;
 }
 
-enum M_Result m_renderer_create(struct M_Instance *instance) {
-  enum M_Result result = M_SUCCESS;
-
-  result =
-      create_command_pool(&instance->renderer.command_pool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, instance);
-  return_result_if_err(result);
-  return_result_if_err(allocate_command_buffers(instance));
-  return_result_if_err(create_sync_objects(instance));
-
-  return result;
-}
-
-enum M_Result m_renderer_render(struct M_Instance *instance, struct M_Sprite **sprites, uint32_t num_sprites) {
+enum M_Result m_renderer_present(struct M_Instance *instance, uint32_t image_idx) {
   enum M_Result result = M_SUCCESS;
   const uint32_t current_frame = instance->renderer.current_frame;
-
-  vk_return_result_if_err(vkWaitForFences(instance->device.vk_device, 1,
-                                          &instance->renderer.in_flight_fences[current_frame], VK_TRUE, UINT64_MAX));
-  vk_return_result_if_err(
-      vkResetFences(instance->device.vk_device, 1, &instance->renderer.in_flight_fences[current_frame]));
-
-  uint32_t current_image_idx;
-  VkResult vk_result =
-      vkAcquireNextImageKHR(instance->device.vk_device, instance->swapchain.vk_swapchain, UINT64_MAX,
-                            instance->renderer.image_available_semaphores[current_frame], NULL, &current_image_idx);
-  vk_return_result_if_err(vk_result);
-
-  vk_return_result_if_err(vkResetCommandBuffer(instance->renderer.command_buffers[current_frame], 0));
-  return_result_if_err(m_renderer_record(instance, sprites, num_sprites, current_image_idx));
-
   const VkPipelineStageFlags wait_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
   const VkSubmitInfo submit_info = {
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
       .commandBufferCount = 1,
@@ -156,8 +115,8 @@ enum M_Result m_renderer_render(struct M_Instance *instance, struct M_Sprite **s
       .pSignalSemaphores = &instance->renderer.render_finished_semaphores[current_frame],
   };
 
-  vk_result = vkQueueSubmit(instance->device.graphics_queue, 1, &submit_info,
-                            instance->renderer.in_flight_fences[current_frame]);
+  VkResult vk_result = vkQueueSubmit(instance->device.graphics_queue, 1, &submit_info,
+                                     instance->renderer.in_flight_fences[current_frame]);
   vk_return_result_if_err(vk_result);
 
   const VkPresentInfoKHR present_info = {
@@ -166,11 +125,65 @@ enum M_Result m_renderer_render(struct M_Instance *instance, struct M_Sprite **s
       .pWaitSemaphores = &instance->renderer.render_finished_semaphores[current_frame],
       .swapchainCount = 1,
       .pSwapchains = &instance->swapchain.vk_swapchain,
-      .pImageIndices = &current_image_idx,
+      .pImageIndices = &image_idx,
   };
 
   vk_return_result_if_err(vkQueuePresentKHR(instance->device.present_queue, &present_info));
   instance->renderer.current_frame = (current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+  return result;
+}
+
+enum M_Result m_renderer_create(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+
+  result =
+      create_command_pool(&instance->renderer.command_pool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, instance);
+  return_result_if_err(result);
+  return_result_if_err(allocate_command_buffers(instance));
+  return_result_if_err(create_sync_objects(instance));
+  instance->renderer.currently_rendering = false;
+
+  return result;
+}
+enum M_Result m_renderer_render_begin(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+  const uint32_t current_frame = instance->renderer.current_frame;
+
+  vk_return_result_if_err(vkWaitForFences(instance->device.vk_device, 1,
+                                          &instance->renderer.in_flight_fences[current_frame], VK_TRUE, UINT64_MAX));
+  vk_return_result_if_err(
+      vkResetFences(instance->device.vk_device, 1, &instance->renderer.in_flight_fences[current_frame]));
+
+  VkResult vk_result = vkAcquireNextImageKHR(instance->device.vk_device, instance->swapchain.vk_swapchain, UINT64_MAX,
+                                             instance->renderer.image_available_semaphores[current_frame], NULL,
+                                             &instance->renderer.current_image_idx);
+  vk_return_result_if_err(vk_result);
+
+  vk_return_result_if_err(vkResetCommandBuffer(instance->renderer.command_buffers[current_frame], 0));
+  return_result_if_err(m_renderer_prepare(instance, instance->renderer.current_image_idx));
+
+  return result;
+}
+
+enum M_Result m_renderer_render_end(struct M_Instance *instance) {
+  enum M_Result result = M_SUCCESS;
+
+  vkCmdEndRenderPass(instance->renderer.command_buffers[instance->renderer.current_frame]);
+  vk_return_result_if_err(vkEndCommandBuffer(instance->renderer.command_buffers[instance->renderer.current_frame]));
+  return_result_if_err(m_renderer_present(instance, instance->renderer.current_image_idx));
+
+  return result;
+}
+
+enum M_Result m_renderer_render_buffer(const struct M_Instance *instance, VkBuffer vertex_buf, VkBuffer index_buf,
+                                       uint32_t num_indices) {
+  enum M_Result result = M_SUCCESS;
+
+  VkDeviceSize offsets[] = {0};
+  const uint32_t current_frame = instance->renderer.current_frame;
+  vkCmdBindVertexBuffers(instance->renderer.command_buffers[current_frame], 0, 1, &vertex_buf, offsets);
+  vkCmdBindIndexBuffer(instance->renderer.command_buffers[current_frame], index_buf, 0, VK_INDEX_TYPE_UINT32);
+  vkCmdDrawIndexed(instance->renderer.command_buffers[current_frame], num_indices, 1, 0, 0, 0);
 
   return result;
 }

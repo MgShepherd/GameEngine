@@ -17,6 +17,7 @@ set(SOURCES
 	src/buffer_management.c
 	src/render_object.c
 	src/uniform_management.c
+	src/render.c
 	src/sprite.c
 	src/window.c)
 

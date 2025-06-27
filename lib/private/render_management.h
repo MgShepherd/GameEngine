@@ -16,13 +16,16 @@ struct M_Renderer {
   VkSemaphore *render_finished_semaphores;
   VkFence *in_flight_fences;
   uint32_t current_frame;
+  uint32_t current_image_idx;
+  bool currently_rendering;
 };
 
 enum M_Result m_renderer_create(struct M_Instance *instance);
 void m_renderer_destroy(struct M_Instance *instance);
 
-// TODO: Replace with render begin and end functions so that we can have functions which take in the objects to render
-// individually Will allow for more customization from programs that are using the library
-enum M_Result m_renderer_render(struct M_Instance *instance, struct M_Sprite **sprites, uint32_t num_sprites);
+enum M_Result m_renderer_render_begin(struct M_Instance *instance);
+enum M_Result m_renderer_render_end(struct M_Instance *instance);
+enum M_Result m_renderer_render_buffer(const struct M_Instance *instance, VkBuffer vertex_buf, VkBuffer index_buf,
+                                       uint32_t num_indices);
 
 #endif // !RENDER_MANAGEMENT_H

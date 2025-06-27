@@ -26,6 +26,8 @@ const char *m_result_to_string(enum M_Result result) {
     return "FILE_READ_ERROR";
   case M_INPUT_ERR:
     return "USER_INPUT_ERROR";
+  case M_RENDER_ORDER_ERR:
+    return "RENDER_ORDER_ERROR";
   }
 }
 

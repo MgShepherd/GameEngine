@@ -53,8 +53,10 @@ void m_window_update(struct M_Window *window) {
 
 void m_window_destroy(struct M_Window *window) {
   if (window != NULL) {
-    if (window->glfw_window != NULL)
+    if (window->glfw_window != NULL) {
+      glfwSetWindowShouldClose(window->glfw_window, true);
       glfwDestroyWindow(window->glfw_window);
+    }
     free(window);
   }
   glfwTerminate();

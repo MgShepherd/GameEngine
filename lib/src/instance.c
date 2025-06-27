@@ -67,12 +67,6 @@ enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *wi
   return result;
 }
 
-enum M_Result m_instance_update(M_Instance *instance, M_Sprite **sprites, uint32_t num_sprites) {
-  enum M_Result result = M_SUCCESS;
-  return_result_if_err_clean(m_renderer_render(instance, sprites, num_sprites), m_instance_destroy, instance);
-  return result;
-}
-
 void m_instance_set_clear_color(M_Instance *instance, struct M_Color color) { instance->clear_color = color; }
 
 void m_instance_destroy(M_Instance *instance) {
