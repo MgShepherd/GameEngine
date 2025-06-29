@@ -1,4 +1,5 @@
 #include "window.h"
+#include "input.h"
 #include "instance_private.h"
 #include "logger.h"
 #include "m_utils.h"
@@ -36,6 +37,7 @@ enum M_Result m_window_create(M_Window **window, const char *title, int width, i
   return_result_if_null_clean((*window)->glfw_window, M_WINDOW_INIT_ERR, "Unable to create GLFW Window",
                               m_window_destroy, *window);
 
+  m_input_init(*window);
   m_logger_info("Successfully initialised M_Window");
 
   return result;

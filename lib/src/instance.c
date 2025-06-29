@@ -24,7 +24,6 @@
 enum M_Result m_instance_create(struct M_Instance **instance, const M_Window *window,
                                 const M_InstanceOptions *instance_options) {
   enum M_Result result = M_SUCCESS;
-
   *instance = malloc(sizeof(struct M_Instance));
   return_result_if_null_clean(*instance, M_MEMORY_ALLOC_ERR, "Unable to allocate memory", m_instance_destroy,
                               *instance);

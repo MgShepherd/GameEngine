@@ -1,0 +1,73 @@
+#ifndef M_INPUT_H
+#define M_INPUT_H
+
+#include "window.h"
+#include <stdbool.h>
+
+enum M_KeyCode {
+  M_KEY_COMMA = 0,
+  M_KEY_MINUS = 1,
+  M_KEY_PERIOD = 2,
+  M_KEY_SLASH = 3,
+  M_KEY_0 = 4,
+  M_KEY_1 = 5,
+  M_KEY_2 = 6,
+  M_KEY_3 = 7,
+  M_KEY_4 = 8,
+  M_KEY_5 = 9,
+  M_KEY_6 = 10,
+  M_KEY_7 = 11,
+  M_KEY_8 = 12,
+  M_KEY_9 = 13,
+  M_KEY_SEMICOLON = 14,
+  M_KEY_EQUAL = 15,
+  M_KEY_A = 16,
+  M_KEY_B = 17,
+  M_KEY_C = 18,
+  M_KEY_D = 19,
+  M_KEY_E = 20,
+  M_KEY_F = 21,
+  M_KEY_G = 22,
+  M_KEY_H = 23,
+  M_KEY_I = 24,
+  M_KEY_J = 25,
+  M_KEY_K = 26,
+  M_KEY_L = 27,
+  M_KEY_M = 28,
+  M_KEY_N = 29,
+  M_KEY_O = 30,
+  M_KEY_P = 31,
+  M_KEY_Q = 32,
+  M_KEY_R = 33,
+  M_KEY_S = 34,
+  M_KEY_T = 35,
+  M_KEY_U = 36,
+  M_KEY_V = 37,
+  M_KEY_W = 38,
+  M_KEY_X = 39,
+  M_KEY_Y = 40,
+  M_KEY_Z = 41,
+  M_KEY_LEFT_BRACKET = 42,
+  M_KEY_BACKSLASH = 43,
+  M_KEY_RIGHT_BRACKET = 44,
+  M_KEY_ESCAPE = 45,
+  M_KEY_ENTER = 46,
+  M_KEY_TAB = 47,
+  M_KEY_BACKSPACE = 48,
+  M_KEY_INSERT = 49,
+  M_KEY_DELETE = 50,
+  M_KEY_RIGHT = 51,
+  M_KEY_LEFT = 52,
+  M_KEY_DOWN = 53,
+  M_KEY_UP = 54,
+  M_KEY_PAGE_UP = 55,
+  M_KEY_PAGE_DOWN = 56,
+  M_KEY_HOME = 57,
+  M_KEY_END = 58,
+  M_KEY_UNSUPPORTED = 59,
+};
+
+void m_input_init(const M_Window *window);
+bool m_key_is_pressed(const M_Window *window, enum M_KeyCode code);
+
+#endif

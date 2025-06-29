@@ -34,7 +34,7 @@ int main() {
       .width = 20.0f,
       .height = 150.0f,
       .color = {.r = 1.0f},
-  };
+   };
   const struct M_SpriteProperties paddle_2_properties = {
       .x = 640.0f - 32.0f - 20.0f,
       .y = 32.0f,

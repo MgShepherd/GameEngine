@@ -9,6 +9,7 @@ set(SOURCES
 	src/render.c
 	src/window.c
 	src/sprite.c
+	src/input.c
 	src/private/vulkan_management.c
 	src/private/debug_messenger.c
 	src/private/m_utils.c
