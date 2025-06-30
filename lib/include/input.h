@@ -67,7 +67,7 @@ enum M_KeyCode {
   M_KEY_UNSUPPORTED = 59,
 };
 
-void m_input_init(const M_Window *window);
-bool m_key_is_pressed(const M_Window *window, enum M_KeyCode code);
+enum M_Result m_input_init(const M_Window *window);
+bool m_key_is_pressed(enum M_KeyCode code);
 
 #endif

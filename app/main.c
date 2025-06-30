@@ -1,3 +1,4 @@
+#include "input.h"
 #include "instance.h"
 #include "logger.h"
 #include "render.h"
@@ -34,7 +35,7 @@ int main() {
       .width = 20.0f,
       .height = 150.0f,
       .color = {.r = 1.0f},
-   };
+  };
   const struct M_SpriteProperties paddle_2_properties = {
       .x = 640.0f - 32.0f - 20.0f,
       .y = 32.0f,
@@ -55,6 +56,10 @@ int main() {
 
   while (m_window_is_open(window)) {
     m_window_update(window);
+
+    if (m_key_is_pressed(M_KEY_A)) {
+      m_logger_info("Pressed the A key");
+    }
 
     result = m_render_begin(instance);
     if (result != M_SUCCESS) {
